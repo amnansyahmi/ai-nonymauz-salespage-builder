@@ -54,14 +54,28 @@ window.SP = window.SP || {};
     tehtarik: { label: 'Teh Tarik', primary: '#6b4026', accent: '#2a1d16', bg: '#efebe6', text: '#2a1d16' },
     laut:     { label: 'Laut',      primary: '#0f4f7d', accent: '#0f4f7d', bg: '#ffffff', text: '#0e1b26' },
     ros:      { label: 'Ros',       primary: '#9b2450', accent: '#9b2450', bg: '#fbf7f8', text: '#2a141d' },
-    malam:    { label: 'Malam',     primary: '#e3ad48', accent: '#e3ad48', bg: '#111315', text: '#eef0ec' }
+    malam:    { label: 'Malam',     primary: '#e3ad48', accent: '#e3ad48', bg: '#111315', text: '#eef0ec' },
+    cili:     { label: 'Cili',      primary: '#b3261e', accent: '#b3261e', bg: '#ffffff', text: '#23140f', alt: '#e3e1dc' },
+    bab:      { label: 'Bab',       primary: '#fe7141', accent: '#000000', bg: '#ffffff', text: '#000000', alt: '#f0ff1c' },
+    langit:   { label: 'Langit',    primary: '#0a0a0a', accent: '#0a0a0a', bg: '#cbe4f2', text: '#0a0a0a', alt: '#f1e3b5' }
+  };
+
+  /* Layout styles: each is a whole composition, not a colour swap. */
+  SP.looks = {
+    classic:  { label: 'Classic',  hint: 'Clean sections, heading beside its content' },
+    label:    { label: 'Label',    hint: 'The page is your product label' },
+    chapters: { label: 'Chapters', hint: 'Each section a full colour field' },
+    unit:     { label: 'Shape',    hint: 'One big shape runs through the page' }
   };
 
   SP.fonts = {
     moden:  { label: 'Modern',   h: "'Schibsted Grotesk', system-ui, sans-serif", b: "'Schibsted Grotesk', system-ui, sans-serif", q: 'Schibsted+Grotesk:wght@400;600;800' },
     tegas:  { label: 'Bold',     h: "'Archivo', system-ui, sans-serif", b: "'Archivo', system-ui, sans-serif", q: 'Archivo:wdth,wght@75..100,400;75..100,600;75..100,800' },
     elegan: { label: 'Elegant',  h: "'Fraunces', Georgia, serif", b: "'Figtree', system-ui, sans-serif", q: 'Fraunces:opsz,wght@9..144,600;9..144,700&family=Figtree:wght@400;600' },
-    mesra:  { label: 'Friendly', h: "'Gabarito', system-ui, sans-serif", b: "'Gabarito', system-ui, sans-serif", q: 'Gabarito:wght@400;600;800' }
+    mesra:  { label: 'Friendly', h: "'Gabarito', system-ui, sans-serif", b: "'Gabarito', system-ui, sans-serif", q: 'Gabarito:wght@400;600;800' },
+    slab:   { label: 'Slab',     h: "'Zilla Slab', Georgia, serif", b: "'Zilla Slab', Georgia, serif", q: 'Zilla+Slab:wght@400;500;600;700' },
+    hanken: { label: 'Plain',    h: "'Hanken Grotesk', system-ui, sans-serif", b: "'Hanken Grotesk', system-ui, sans-serif", q: 'Hanken+Grotesk:wght@400;500;600' },
+    stack:  { label: 'Soft',     h: "'Stack Sans Headline', system-ui, sans-serif", b: "'Stack Sans Text', system-ui, sans-serif", q: 'Stack+Sans+Headline:wght@300;400&family=Stack+Sans+Text:wght@400;500' }
   };
   SP.fontsURL = function (keys) {
     var qs = keys.map(function (k) { return SP.fonts[k].q; });
@@ -77,7 +91,7 @@ window.SP = window.SP || {};
 
   SP.defaultTheme = function (preset) {
     var t = SP.themes[preset || 'pandan'];
-    return { preset: preset || 'pandan', primary: t.primary, accent: t.accent, bg: t.bg, text: t.text, font: 'moden', corners: 'soft' };
+    return { preset: preset || 'pandan', primary: t.primary, accent: t.accent, bg: t.bg, text: t.text, alt: t.alt || '', font: 'moden', corners: 'soft', look: 'classic' };
   };
 
   SP.themeVars = function (t) {
@@ -86,8 +100,14 @@ window.SP = window.SP || {};
     return [
       '--p:' + t.primary, '--a:' + t.accent, '--bg:' + t.bg, '--tx0:' + t.text,
       '--onp:' + SP.onColor(t.primary), '--ona:' + SP.onColor(t.accent),
+      '--alt:' + (t.alt || 'color-mix(in srgb,' + t.primary + ' 16%,' + t.bg + ')'), '--onalt:' + (t.alt ? SP.onColor(t.alt) : t.text),
       '--fh:' + f.h, '--fb:' + f.b, '--r:' + c.r, '--rb:' + c.rb
     ].join(';');
+  };
+
+  SP.pageClass = function (page, extra) {
+    var s = page.settings || {}, look = SP.looks[page.theme.look] ? page.theme.look : 'classic';
+    return 'sp-page look-' + look + (s.sticky && s.stickyText ? ' has-sticky' : '') + (extra ? ' ' + extra : '');
   };
 
   /* Words that appear on the customer's page. */

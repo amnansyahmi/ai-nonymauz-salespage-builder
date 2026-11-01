@@ -117,13 +117,13 @@ function SP_initPage(root) {
       es.forEach(function (e) { e.isIntersecting ? seen.add(e.target) : seen.delete(e.target); });
       bar.classList.toggle('is-away', seen.size > 0);
     });
-    document.querySelectorAll('#order, .sp-b-footer').forEach(function (el) { away.observe(el); });
+    document.querySelectorAll('#order, .sp-b-footer, .sp-band').forEach(function (el) { away.observe(el); });
   }
 
   /* ---------- entrance motion (live page only) ---------- */
   if (root === document && window.IntersectionObserver && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
     var sel = '.sp-hero-copy > *, .sp-hero-img, .sp-head > *, .sp-text > *, .sp-points li, .sp-review, .sp-bonus, .sp-faq details, .sp-cd-u, .sp-item, .sp-radio, ' +
-      '.sp-offer-a > *, .sp-guarantee > *, .sp-cta > *, .sp-cta-b > *, .sp-countdown > .sp-h2, .sp-footer > *, .sp-figure, .sp-gal-cell, .sp-cust, .sp-sum';
+      '.sp-offer-main > *, .sp-offer-stub > *, .sp-band, .sp-guarantee > *, .sp-cta > *, .sp-cta-b > *, .sp-countdown > .sp-h2, .sp-footer > *, .sp-figure, .sp-gal-cell, .sp-cust, .sp-sum';
     var io = new IntersectionObserver(function (es) {
       es.forEach(function (e) {
         if (!e.isIntersecting) return;

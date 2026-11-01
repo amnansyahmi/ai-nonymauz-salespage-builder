@@ -71,6 +71,33 @@
     return '<div class="sp-head">' + (h ? '<' + tag + ' class="sp-h' + (level || 2) + '">' + rich(h) + '</' + tag + '>' : '') +
       (sub ? '<p class="sp-lead">' + rich(sub) + '</p>' : '') + '</div>';
   }
+  /* The product drawn in code (for the Label style when there is no photo yet): a jar of sambal with its label. */
+  function jarSVG(c) {
+    var dots = '', seed = 7;
+    var rnd = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    for (var i = 0; i < 70; i++) {
+      var x = 70 + rnd() * 160, y = 150 + rnd() * 190;
+      if (y > 205 && y < 290) continue;
+      dots += '<ellipse cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" rx="' + (4 + rnd() * 5).toFixed(1) + '" ry="' + (2 + rnd() * 2.5).toFixed(1) + '" transform="rotate(' + Math.round(rnd() * 180) + ' ' + x.toFixed(1) + ' ' + y.toFixed(1) + ')" fill="#e9c58f"/>';
+    }
+    var name = esc(((c.settings && c.settings.businessName) || '').slice(0, 22));
+    return '<svg class="sp-jar" viewBox="0 0 300 400" role="img" aria-label="Balang produk (lukisan)">' +
+      '<rect x="78" y="40" width="144" height="58" rx="10" fill="#1d1d1b"/><rect x="78" y="86" width="144" height="12" fill="#2f2f2c"/>' +
+      '<rect x="56" y="104" width="188" height="262" rx="34" fill="#6e1a10"/>' + dots +
+      '<rect x="56" y="104" width="188" height="262" rx="34" fill="none" stroke="#ffffff" stroke-opacity=".18" stroke-width="6"/>' +
+      '<rect x="56" y="200" width="188" height="96" style="fill:var(--bg)"/>' +
+      '<rect x="56" y="200" width="188" height="8" style="fill:var(--p)"/><rect x="56" y="288" width="188" height="8" style="fill:var(--p)"/>' +
+      (name ? '<text x="150" y="246" text-anchor="middle" font-weight="700" font-size="20" style="font-family:var(--fh);fill:var(--tx0)">' + name + '</text>' : '') +
+      '<text x="150" y="272" text-anchor="middle" font-size="13" style="font-family:var(--fb);fill:var(--tx0)">250 g</text></svg>';
+  }
+  /* The motif drawn as the object itself: a wall-mounted split unit (Shape style, no photo yet). */
+  function unitSVG() {
+    return '<svg class="sp-unit" viewBox="0 0 620 200" role="img" aria-label="Unit aircond dinding (lukisan)">' +
+      '<rect x="0" y="0" width="620" height="200" rx="64" fill="#ffffff"/>' +
+      '<rect x="70" y="150" width="480" height="16" rx="8" style="fill:var(--tx0)" opacity=".85"/>' +
+      '<rect x="70" y="128" width="480" height="6" rx="3" style="fill:var(--tx0)" opacity=".12"/>' +
+      '<circle cx="548" cy="58" r="7" fill="#2bb3e8"/></svg>';
+  }
   function youtubeId(url) {
     var m = String(url || '').match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
     return m ? m[1] : '';
@@ -117,8 +144,9 @@
         BG
       ],
       render: function (p, c) {
-        var pic = img(p.image, c, 'sp-hero-img', p.headline);
-        return '<div class="sp-hero sp-al-' + esc(p.align) + (pic ? ' has-pic' : '') + '"><div class="sp-hero-copy">' +
+        var pic = !p.image && c.look === 'label' ? jarSVG(c) : !p.image && c.look === 'unit' ? unitSVG() : img(p.image, c, 'sp-hero-img', p.headline);
+        var brand = c.look === 'label' && c.settings && c.settings.businessName ? '<p class="sp-label-brand">' + esc(c.settings.businessName) + '</p>' : '';
+        return '<div class="sp-hero sp-al-' + esc(p.align) + (pic ? ' has-pic' : '') + '"><div class="sp-hero-copy">' + brand +
           (c.editor || c.thumb ? '<h2 class="sp-h1">' + rich(p.headline) + '</h2>' : '<h1 class="sp-h1">' + rich(p.headline) + '</h1>') +
           (p.sub ? '<p class="sp-lead">' + rich(p.sub) + '</p>' : '') +
           btn(p.btnText, p.btnLink) +
@@ -280,11 +308,11 @@
       render: function (p) {
         var save = Number(p.oldPrice) - Number(p.price);
         var meta = [p.badge, save > 0 ? 'Jimat ' + SP.money(save) : '', p.priceNote].filter(Boolean).map(esc).join(' · ');
-        return '<div class="sp-offer"><div class="sp-offer-a"><h2 class="sp-h2">' + rich(p.title) + '</h2>' +
-          '<div class="sp-bigprice"><b>' + SP.money(p.price) + '</b>' + (Number(p.oldPrice) > Number(p.price) ? '<s>' + SP.money(p.oldPrice) + '</s>' : '') + '</div>' +
+        return '<div class="sp-offer"><div class="sp-offer-main"><h2 class="sp-h2">' + rich(p.title) + '</h2>' +
+          '<ul class="sp-points sp-points-check">' + (p.items || []).map(function (it) { return '<li><span class="sp-mark sp-mark-check">' + svgCheck + '</span><span>' + rich(it.text) + '</span></li>'; }).join('') + '</ul></div>' +
+          '<div class="sp-offer-stub"><div class="sp-bigprice"><b>' + SP.money(p.price) + '</b>' + (Number(p.oldPrice) > Number(p.price) ? '<s>' + SP.money(p.oldPrice) + '</s>' : '') + '</div>' +
           (meta ? '<p class="sp-offer-meta">' + meta + '</p>' : '') + btn(p.btnText, p.btnLink) +
-          (p.note ? '<p class="sp-small">' + esc(p.note) + '</p>' : '') + '</div>' +
-          '<ul class="sp-points sp-points-check">' + (p.items || []).map(function (it) { return '<li><span class="sp-mark sp-mark-check">' + svgCheck + '</span><span>' + rich(it.text) + '</span></li>'; }).join('') + '</ul></div>';
+          (p.note ? '<p class="sp-small">' + esc(p.note) + '</p>' : '') + '</div></div>';
       }
     },
 
@@ -371,7 +399,14 @@
       label: 'Call to action', icon: 'megaphone', hint: 'Reminder with a button',
       defaults: function () { return { heading: 'Jangan tunggu lagi. **Stok terhad!**', text: 'Tekan butang di bawah dan selesaikan tempahan dalam 1 minit.', btnText: 'Order sekarang', btnLink: '#order', bg: 'primary' }; },
       fields: [F.text('heading', 'Heading', { hint: BOLD_HINT }), F.area('text', 'Text', { rows: 3 }), F.text('btnText', 'Button text'), F.text('btnLink', 'Button goes to', { hint: LINK_HINT }), BG],
-      render: function (p) { return '<div class="sp-cta">' + (p.heading ? '<h2 class="sp-h2">' + rich(p.heading) + '</h2>' : '') + '<div class="sp-cta-b">' + (p.text ? '<p class="sp-lead">' + rich(p.text) + '</p>' : '') + btn(p.btnText, p.btnLink) + '</div></div>'; }
+      render: function (p, c) {
+        if ((c.look === 'label' || c.look === 'chapters') && p.btnText && p.btnText.length <= 9) {
+          return '<a class="sp-band" href="' + esc(p.btnLink || '#order') + '"><span class="sp-band-s">' + (p.heading ? rich(p.heading) + (p.text ? ' ' : '') : '') + (p.text ? rich(p.text) : '') + '</span>' +
+            '<svg class="sp-band-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M8 6h10v10" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>' +
+            '<span class="sp-band-w" style="--n:' + p.btnText.length + '">' + esc(p.btnText) + '</span></a>';
+        }
+        return '<div class="sp-cta">' + (p.heading ? '<h2 class="sp-h2">' + rich(p.heading) + '</h2>' : '') + '<div class="sp-cta-b">' + (p.text ? '<p class="sp-lead">' + rich(p.text) + '</p>' : '') + btn(p.btnText, p.btnLink) + '</div></div>';
+      }
     },
 
     spacer: {
@@ -418,11 +453,12 @@
     if (!def) return '';
     var p = b.props;
     var c = Object.assign({}, ctx, { bid: b.id });
+    ctx._n = (ctx._n || 0) + 1;
     var inner = def.render(p, c);
     if (!inner && !ctx.editor) return '';
     var anchor = '';
     if (b.type === 'order' && !ctx._orderSeen) { anchor = ' id="order"'; ctx._orderSeen = true; }
-    return '<section class="sp-sec sp-bg-' + esc(p.bg || 'default') + ' sp-b-' + b.type + '"' + anchor + '><div class="sp-wrap">' + inner + '</div></section>';
+    return '<section class="sp-sec sp-bg-' + esc(p.bg || 'default') + ' sp-b-' + b.type + ' sp-n' + ((ctx._n - 1) % 4) + '"' + anchor + '><div class="sp-wrap">' + inner + '</div></section>';
   };
 
   SP.renderFixed = function (page, ctx) {
@@ -437,7 +473,7 @@
   };
 
   SP.renderPage = function (page, ctx) {
-    ctx = Object.assign({ lang: (page.settings && page.settings.lang) || 'ms', settings: page.settings }, ctx);
+    ctx = Object.assign({ lang: (page.settings && page.settings.lang) || 'ms', settings: page.settings, look: page.theme.look || 'classic' }, ctx);
     return page.blocks.map(function (b) { return SP.renderSection(b, ctx); }).join('') + SP.renderFixed(page, ctx);
   };
 })(window.SP);

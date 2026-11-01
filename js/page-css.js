@@ -144,8 +144,8 @@
 
     /* offer: the price set large beside what is included */
     '.sp-offer{display:grid;grid-template-columns:minmax(0,1fr);gap:40px}',
-    '@container (min-width:860px){.sp-offer{grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:64px;align-items:end}}',
-    '.sp-offer-a{display:flex;flex-direction:column;gap:20px;align-items:flex-start}',
+    '@container (min-width:860px){.sp-offer{grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:64px;align-items:start}}',
+    '.sp-offer-main,.sp-offer-stub{display:flex;flex-direction:column;gap:20px;align-items:flex-start}',
     '.sp-bigprice{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;font-variant-numeric:tabular-nums}',
     '.sp-bigprice b{font-family:var(--fh);font-size:var(--fx);line-height:.9;letter-spacing:-.04em;font-weight:800}',
     '.sp-bigprice s{font-size:var(--fm)}',
@@ -184,7 +184,7 @@
 
     /* countdown: its heading beside the clock */
     '.sp-countdown{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:center}',
-    '@container (min-width:680px){.sp-countdown{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(32px,6cqi,64px)}}',
+    '@container (min-width:860px){.sp-countdown{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(32px,6cqi,64px)}}',
     '.sp-cd-row{display:flex;gap:clamp(20px,4cqi,48px)}',
     '.sp-cd-u{display:flex;flex-direction:column;gap:6px}',
     '.sp-cd-u b{font-family:var(--fh);font-size:var(--fx);line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.04em;font-weight:800}',

@@ -36,7 +36,7 @@
       '<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
       '<link rel="stylesheet" href="' + SP.fontsURL([t.font]) + '">\n' +
       '<style>html{scroll-behavior:smooth}body{margin:0;background:' + esc(t.bg) + '}\n' + SP.pageCSS + '\n</style>\n' + pixel + '\n</head>\n<body>\n' +
-      '<div class="sp-page' + (hasSticky ? ' has-sticky' : '') + '" style="' + esc(SP.themeVars(t)) + '">\n' +
+      '<div class="' + SP.pageClass(page) + '" style="' + esc(SP.themeVars(t)) + '">\n' +
       SP.renderPage(page, { editor: false }) +
       '\n</div>\n<script>\n' + SP_initPage.toString() + '\nSP_initPage(document);\n</script>\n' +
       '<!-- Made with Nonymauz Salespage Builder -->\n</body>\n</html>\n';

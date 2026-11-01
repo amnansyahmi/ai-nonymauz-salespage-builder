@@ -66,7 +66,7 @@
 
   function pageFrame(page, ctx, extraClass) {
     var s = page.settings;
-    return '<div class="sp-page ' + (extraClass || '') + (s.sticky && s.stickyText ? ' has-sticky' : '') + '" style="' + esc(SP.themeVars(page.theme)) + '">' + SP.renderPage(page, ctx) + '</div>';
+    return '<div class="' + SP.pageClass(page, extraClass) + '" style="' + esc(SP.themeVars(page.theme)) + '">' + SP.renderPage(page, ctx) + '</div>';
   }
 
   /* A picture of the seller's page, drawn in its own sandboxed frame so its styles stay its own. */
@@ -162,13 +162,13 @@
       SP.templates.map(function (t) {
         var p = SP.normalizePage(t.build()), f = pageFacts(p);
         var thumb = SP.clone(p); thumb.blocks = thumb.blocks.slice(0, 3);
-        return '<article class="tpl" data-tpl="' + t.id + '"><div class="thumb" aria-hidden="true">' + thumbFrame(thumb, 840) + '</div>' +
+        return '<article class="tpl" data-tpl="' + t.id + '"><div class="thumb" aria-hidden="true">' + thumbFrame(thumb, 1200) + '</div>' +
           '<div class="tpl-meta"><b>' + esc(t.name) + '</b><span>' + esc(t.desc) + '</span><span class="sub num">' + plural(f.sections, 'section', 'sections') + ' · ' + plural(f.packages, 'package', 'packages') + ' · ' + SP.themes[p.theme.preset].label + ' colours</span></div>' +
           '<button type="button" class="tpl-go"><span>Use the ' + esc(t.name) + ' template</span></button></article>';
       }).join('') + '</div></section>' +
       '</div></main>';
 
-    var fit = function (t) { if (t.clientWidth) t.style.setProperty('--k', (t.clientWidth / 840).toFixed(4)); };
+    var fit = function (t) { if (t.clientWidth) t.style.setProperty('--k', (t.clientWidth / 1200).toFixed(4)); };
     if (window.ResizeObserver) { var ro = new ResizeObserver(function (es) { es.forEach(function (e) { fit(e.target); }); }); $$('.thumb', app).forEach(function (t) { ro.observe(t); }); }
     else $$('.thumb', app).forEach(fit);
     $$('.tpl', app).forEach(function (card) {
@@ -399,7 +399,7 @@
     var root = $('#page-root');
     if (!root) return;
     var p = S.page, s = p.settings;
-    var ctx = { editor: true, lang: s.lang, settings: s };
+    var ctx = { editor: true, lang: s.lang, settings: s, look: p.theme.look };
     var html = p.blocks.map(function (b, i) {
       var d = SP.blocks[b.type];
       return '<div class="ed-blk' + (b.id === S.sel ? ' sel' : '') + '" data-id="' + b.id + '">' +
@@ -414,7 +414,7 @@
     if (!p.blocks.length) {
       html = '<div class="ed-empty">' + icon('plus') + '<b>Your page is empty</b><span>Drag a section here from the left, or tap “Add section”.</span></div>';
     }
-    root.innerHTML = '<div class="sp-page' + (s.sticky && s.stickyText ? ' has-sticky' : '') + '" style="' + esc(SP.themeVars(p.theme)) + '">' + html + SP.renderFixed(p, ctx) + '</div>';
+    root.innerHTML = '<div class="' + SP.pageClass(p) + '" style="' + esc(SP.themeVars(p.theme)) + '">' + html + SP.renderFixed(p, ctx) + '</div>';
     SP_initPage(root);
   }
 
@@ -702,6 +702,15 @@
     /* colour presets */
     var sec = function (title) { var d = h('div', { class: 'form-sec' }); d.appendChild(h('h3', {}, esc(title))); form.appendChild(d); return d; };
     var biz = sec('Orders');
+    var lk = sec('Layout style');
+    var looks = h('div', { class: 'fontpick lookpick', role: 'radiogroup', 'aria-label': 'Layout style' });
+    Object.keys(SP.looks).forEach(function (k) {
+      var lo = SP.looks[k], on = (t.look || 'classic') === k;
+      var b = h('button', { type: 'button', class: on ? 'on' : '', role: 'radio', 'aria-checked': on ? 'true' : 'false', title: lo.hint }, '<b>' + esc(lo.label) + '</b><span>' + esc(lo.hint) + '</span>');
+      b.addEventListener('click', function () { mutate(null, function () { t.look = k; }, { insp: true }); });
+      looks.appendChild(b);
+    });
+    lk.appendChild(looks);
     var look = sec('Colours');
     var sw = h('div', { class: 'swatches', role: 'radiogroup', 'aria-label': 'Colour theme' });
     Object.keys(SP.themes).forEach(function (k) {

@@ -156,7 +156,7 @@ button.pill:hover { filter: brightness(.97); }
 .tpl:hover { border-color: var(--control); }
 .tpl:focus-within { border-color: var(--text); }
 .thumb { display: block; height: 200px; overflow: hidden; position: relative; border-bottom: 1px solid var(--border); background: var(--surface); }
-.thumb .tframe { height: 720px; transform: scale(var(--k, .32)); }
+.thumb .tframe { height: 1000px; transform: scale(var(--k, .225)); }
 .tframe { display: block; border: 0; transform-origin: 0 0; pointer-events: none; background: #fff; }
 .tpl-meta { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px 16px; flex: 1; }
 .tpl-meta b { font-weight: 600; font-size: 15px; }
@@ -290,6 +290,9 @@ button.pill:hover { filter: brightness(.97); }
 .fontpick span { font-size: var(--fs-small); color: var(--muted); }
 .fontpick button.on { border: 1.5px solid var(--text); }
 .fontpick button.on span { color: var(--text); }
+.lookpick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lookpick button { align-items: flex-start; text-align: left; padding: 10px 12px; }
+.lookpick b { font-size: 15px; line-height: 20px; font-weight: 600; }
 
 /* signature: the WhatsApp message a customer will send */
 .wa-prev { width: 100%; display: flex; flex-direction: column; gap: 8px; }

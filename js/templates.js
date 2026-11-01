@@ -3,9 +3,9 @@
   'use strict';
   var B = SP.makeBlock;
 
-  function page(name, preset, font, corners, settings, blocks) {
+  function page(name, preset, font, corners, settings, blocks, look) {
     var t = SP.defaultTheme(preset);
-    t.font = font; t.corners = corners;
+    t.font = font; t.corners = corners; t.look = look || 'classic';
     return {
       name: name, theme: t,
       settings: Object.assign({ businessName: '', whatsapp: '', lang: 'ms', waFloat: true, sticky: true, stickyText: 'Order sekarang', stickyLink: '#order', seoTitle: '', seoDesc: '', pixelId: '' }, settings),
@@ -17,9 +17,9 @@
     {
       id: 'food', name: 'Food & homemade products', desc: 'Sambal, kuih, frozen food, skincare. Packages, delivery fees and WhatsApp orders.',
       build: function () {
-        return page('Sambal Garing', 'kunyit', 'mesra', 'round', { businessName: 'Dapur Mak Long' }, [
-          B('hero', { eyebrow: 'Resepi keluarga sejak 1998', headline: 'Sambal garing yang rangup', sub: 'Makan dengan nasi panas, roti atau mi segera. Dimasak dalam kuali besar, tanpa pengawet.', btnText: 'Saya nak order', bg: 'default' }),
-          B('countdown', { heading: 'Harga promo tamat dalam', mode: 'evergreen', minutes: 2880, bg: 'dark' }),
+        return page('Sambal Garing', 'cili', 'slab', 'sharp', { businessName: 'Dapur Mak Long' }, [
+          B('hero', { eyebrow: 'Berat bersih 250 g · Tiada pengawet · Tahan 3 bulan', headline: 'Sambal Garing', sub: 'Ikan bilis rangup sampai hujung botol. Makan dengan nasi panas, roti atau mi segera.', btnText: 'Saya nak order', bg: 'dark' }),
+          B('countdown', { heading: 'Promo batch ini tamat dalam', mode: 'evergreen', minutes: 2880, bg: 'default' }),
           B('benefits', { heading: 'Pernah rasa macam ni?', style: 'cross', items: [{ text: 'Balik kerja penat, tak sempat masak lauk' }, { text: 'Sambal kedai terlalu manis dan berminyak' }, { text: 'Seminggu buka botol, dah lemau' }], bg: 'soft' }),
           B('benefits', { heading: 'Kenapa pelanggan **repeat order**', style: 'check', items: [{ text: 'Ikan bilis gred A, digoreng sampai rangup' }, { text: 'Tiada pengawet dan tiada pewarna' }, { text: 'Botol kedap udara, tahan 3 bulan' }, { text: 'Sesuai dibawa ke asrama, luar negara dan kenduri' }], bg: 'default' }),
           B('testimonials', { heading: 'Apa kata pelanggan', items: [
@@ -27,7 +27,7 @@
             { name: 'Hafiz', info: 'Kuantan', quote: 'Rangup sampai hujung botol. Padu dengan nasi lemak.', image: '', stars: 5 },
             { name: 'Puan Rohani', info: 'Kota Bharu', quote: 'Sampai dalam 3 hari, botol berbalut elok.', image: '', stars: 5 },
             { name: 'Daniel', info: 'Kuching', quote: 'Order ke Sarawak pun cepat. Pedas dia ngam.', image: '', stars: 5 }
-          ], bg: 'soft' }),
+          ], bg: 'dark' }),
           B('order', { heading: 'Pilih pakej anda', sub: 'Lebih banyak, lebih jimat. Jumlah dikira automatik.', items: [
             { name: '1 Botol (250g)', desc: 'Cuba dulu', price: 18, oldPrice: 22, image: '', badge: '' },
             { name: 'Combo 3 Botol', desc: 'Untuk keluarga', price: 48, oldPrice: 66, image: '', badge: 'Paling laris' },
@@ -40,16 +40,16 @@
             { q: 'Berapa lama penghantaran?', a: '2-4 hari bekerja untuk Semenanjung, 4-7 hari untuk Sabah & Sarawak.' },
             { q: 'Boleh jadi ejen?', a: 'Boleh. Pilih Combo 6 + 1 dan WhatsApp kami untuk harga ejen.' }
           ], bg: 'default' }),
-          B('cta', { heading: 'Stok batch ini **terhad**', text: 'Kami masak setiap minggu dalam kuantiti kecil supaya sentiasa segar.', btnText: 'Order sekarang', bg: 'primary' }),
+          B('cta', { heading: 'Stok batch ini terhad.', text: 'Kami masak setiap minggu dalam kuantiti kecil supaya sentiasa segar.', btnText: 'Order', bg: 'primary' }),
           B('footer', { business: 'Dapur Mak Long', reg: 'SSM: (masukkan no. pendaftaran anda)', contact: 'Shah Alam, Selangor', bg: 'dark' })
-        ]);
+        ], 'label');
       }
     },
     {
       id: 'digital', name: 'Ebook, course or class', desc: 'Digital products and workshops. Price box, bonuses and a money-back promise.',
       build: function () {
-        return page('Kelas Jualan Online', 'laut', 'moden', 'soft', { businessName: 'Akademi Niaga Kecil', stickyText: 'Daftar sekarang · RM39' }, [
-          B('hero', { eyebrow: 'Ebook 80 muka surat + 5 video ringkas', headline: '30 order pertama dari TikTok', sub: 'Panduan langkah demi langkah untuk peniaga kecil yang baru bermula. Tiada bajet iklan besar diperlukan.', btnText: 'Saya nak belajar', bg: 'default' }),
+        return page('Kelas Jualan Online', 'bab', 'hanken', 'sharp', { businessName: 'Akademi Niaga Kecil', stickyText: 'Daftar sekarang · RM39' }, [
+          B('hero', { eyebrow: 'Ebook 80 muka surat + 5 video ringkas', headline: '30 order pertama', sub: 'Dari TikTok dan Facebook. Panduan langkah demi langkah untuk peniaga kecil yang baru bermula. Tiada bajet iklan besar diperlukan.', btnText: 'Saya nak belajar', bg: 'default' }),
           B('video', { heading: '', url: '', caption: 'Tonton video pengenalan 2 minit', bg: 'default' }),
           B('benefits', { heading: 'Apa yang anda akan belajar', style: 'number', items: [{ text: 'Cara pilih produk yang orang **memang cari**' }, { text: 'Tulis caption yang buat orang terus DM' }, { text: 'Susun posting 30 hari tanpa pening kepala' }, { text: 'Tutup jualan di WhatsApp dengan skrip sedia ada' }], bg: 'soft' }),
           B('bonus', { heading: '3 bonus percuma', items: [
@@ -70,14 +70,15 @@
             { q: 'Bila saya dapat ebook?', a: 'Dalam masa 1 jam selepas bayaran disahkan, melalui WhatsApp.' },
             { q: 'Perlu bayar iklan ke?', a: 'Tidak. Panduan ini fokus kepada jualan organik dahulu.' }
           ], bg: 'default' }),
+          B('cta', { heading: 'Mula minggu ini.', text: 'RM39 sekali bayar. Ebook dan video sampai di WhatsApp anda dalam masa 1 jam.', btnText: 'Daftar', btnLink: '#order', bg: 'default' }),
           B('footer', { business: 'Akademi Niaga Kecil', reg: 'SSM: (masukkan no. pendaftaran anda)', contact: 'Sokongan: WhatsApp, Isnin–Jumaat 9 pagi–6 petang', bg: 'dark' })
-        ]);
+        ], 'chapters');
       }
     },
     {
       id: 'service', name: 'Service booking', desc: 'Aircond, cleaning, catering, photography. Services with area-based charges.',
       build: function () {
-        return page('Servis Aircond', 'pandan', 'tegas', 'sharp', { businessName: 'Sejuk Pro Servis', stickyText: 'Tempah slot sekarang' }, [
+        return page('Servis Aircond', 'langit', 'stack', 'soft', { businessName: 'Sejuk Pro Servis', stickyText: 'Tempah slot sekarang' }, [
           B('hero', { eyebrow: 'Lembah Klang · 7 hari seminggu', headline: 'Aircond tak sejuk?', sub: 'Kami datang esok. Cuci, servis dan baiki aircond rumah. Juruteknik bertauliah, harga jelas sebelum mula kerja.', btnText: 'Tempah slot', align: 'left', bg: 'default' }),
           B('benefits', { heading: 'Kenapa pilih kami', style: 'check', items: [{ text: 'Harga tetap, tiada caj tersembunyi' }, { text: 'Juruteknik datang tepat masa, atau servis seterusnya percuma' }, { text: 'Lantai dan dinding dilindungi semasa kerja' }, { text: 'Waranti servis 30 hari' }], bg: 'soft' }),
           B('order', { heading: 'Pilih servis', sub: 'Pilih bilangan unit aircond untuk setiap jenis servis.', items: [
@@ -95,7 +96,7 @@
           ], bg: 'default' }),
           B('cta', { heading: 'Slot hujung minggu cepat penuh', text: 'Tempah awal untuk dapatkan masa yang anda mahu.', btnText: 'Tempah slot', bg: 'primary' }),
           B('footer', { business: 'Sejuk Pro Servis', reg: 'SSM: (masukkan no. pendaftaran anda)', contact: 'Beroperasi 9 pagi – 7 malam, setiap hari', bg: 'dark' })
-        ]);
+        ], 'unit');
       }
     },
     {
