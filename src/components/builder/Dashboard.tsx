@@ -335,7 +335,7 @@ export default function Dashboard() {
                                   <p>
                                     Delete “{p.name}”?
                                     {p.published
-                                      ? " Its live link stops working."
+                                      ? " Its live link stops working and its orders are deleted too. To keep them, take the page offline instead."
                                       : ""}{" "}
                                     This can’t be undone.
                                   </p>

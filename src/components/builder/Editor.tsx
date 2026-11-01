@@ -551,9 +551,6 @@ export default function Editor({ id }: { id: string }) {
                       scrollToBlock(b.id);
                     }}
                   >
-                    <span className="outline-number">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
                     <span>
                       <b>{BLOCKS[b.type].label}</b>
                       <small>

@@ -11,7 +11,13 @@ import { plain } from "@/lib/format";
 import { hasSupabase } from "@/lib/supabase/env";
 import { supabasePublic } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+/* Cached for 5 minutes; publishing, taking offline and restoring refresh it at once via /api/revalidate. */
+export const revalidate = 300;
+/* No pages are built ahead of time; each is cached on its first visit (on-demand ISR). */
+export const dynamicParams = true;
+export async function generateStaticParams() {
+  return [];
+}
 
 const load = cache(async (slug: string) => {
   if (!hasSupabase || !/^[a-z0-9-]{1,48}$/.test(slug)) return null;

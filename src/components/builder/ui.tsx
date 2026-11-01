@@ -37,6 +37,7 @@ const PATHS: Record<string, ReactNode> = {
   footer: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 15h18" /></>,
   sliders: <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />,
   upload: <path d="M12 16V4M7 9l5-5 5 5M5 20h14" />,
+  arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
   download: <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />,
   more: <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3" />,
   inbox: <><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z" /></>,

@@ -201,6 +201,7 @@ const cloudStore: Store = {
               ? "Database setup needs updating before publishing. See the README."
               : error.message,
       };
+    await refreshLive(page.id);
     return { ok: true, slug };
   },
   async unpublish(page) {
@@ -208,6 +209,7 @@ const cloudStore: Store = {
       p_page_id: page.id,
     });
     if (error) throw new Error(error.message);
+    await refreshLive(page.id);
   },
   async uploadImage(blob) {
     const sb = supabaseBrowser();
@@ -325,12 +327,25 @@ export async function publishedVersions(id: string) {
   if (error) throw new Error(error.message);
   return data || [];
 }
+/** Ask the server to refresh the cached live page straight away (best effort). */
+async function refreshLive(pageId: string) {
+  try {
+    await fetch("/api/revalidate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pageId }),
+    });
+  } catch {
+    /* the cache expires on its own within 5 minutes */
+  }
+}
 export async function rollbackPublished(id: string, release: string) {
   const { error } = await supabaseBrowser().rpc("rollback_page", {
     p_page_id: id,
     p_release: release,
   });
   if (error) throw new Error(error.message);
+  await refreshLive(id);
 }
 export async function pageActivity(id: string) {
   if (!hasSupabase) return [];

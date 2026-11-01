@@ -242,7 +242,7 @@ export function SetupDialog({
       </p>
       <form className="setup-grid" onSubmit={submit}>
         <div className="setup-preview">
-          <span className="setup-step">01 / Your starting point</span>
+          <span className="setup-step">Your starting point</span>
           <h3>{t.name}</h3>
           <p>{t.desc}</p>
           <div className="setup-example">
@@ -322,9 +322,14 @@ export function SetupDialog({
               />
             </label>
           )}
-          <label className="fld">
+          <label className="fld file-fld">
             <span>Product photo (optional)</span>
+            <span className={"btn file-btn" + (photoBusy ? " is-busy" : "")}>
+              <Icon name="upload" />
+              {photoBusy ? "Uploading…" : photo ? "Change photo" : "Upload photo"}
+            </span>
             <input
+              className="file-input"
               type="file"
               accept="image/jpeg,image/png,image/webp"
               disabled={photoBusy}
@@ -368,7 +373,7 @@ export function SetupDialog({
           <div className="setup-actions">
             <button className="btn primary" disabled={busy || photoBusy}>
               {busy ? "Creating…" : "Create my page"}
-              <Icon name="link" />
+              <Icon name="arrow" />
             </button>
             <button
               className="btn tertiary"
