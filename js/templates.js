@@ -100,9 +100,18 @@
       }
     },
     {
-      id: 'blank', name: 'Start simple', desc: 'Headline, order form and footer. Add the rest yourself.',
+      id: 'blank', name: 'One product', desc: 'Your product photo stays on screen while customers read and order. A quick start for any product.',
       build: function () {
-        return page('Salespage baru', 'pandan', 'moden', 'soft', {}, [B('hero'), B('order'), B('footer')]);
+        return page('Salespage baru', 'marun', 'literata', 'soft', { businessName: 'Nama Kedai Anda', stickyText: 'Order sekarang' }, [
+          B('hero', { eyebrow: 'Dihantar seluruh Malaysia', headline: 'Nama produk anda', sub: 'Satu ayat tentang apa yang pelanggan dapat, dan kenapa ia berbaloi.', btnText: 'Saya nak order', bg: 'default' }),
+          B('benefits', { heading: 'Kenapa pelanggan suka', style: 'check', items: [{ text: 'Kelebihan pertama, dalam bahasa pelanggan' }, { text: 'Kelebihan kedua, dengan nombor jika ada' }, { text: 'Kelebihan ketiga, yang pesaing tak boleh tiru' }], bg: 'soft' }),
+          B('order', { heading: 'Pilih pakej', sub: '', items: [
+            { name: 'Satu unit', desc: 'Untuk cuba dulu', price: 29, oldPrice: 0, image: '', badge: '' },
+            { name: 'Pakej tiga', desc: 'Paling jimat', price: 79, oldPrice: 87, image: '', badge: 'Paling laris' }
+          ], bg: 'default' }),
+          B('faq', { heading: 'Soalan lazim', bg: 'default' }),
+          B('footer', { business: 'Nama Kedai Anda', reg: 'SSM: (masukkan no. pendaftaran anda)', contact: 'Bandar, Negeri', bg: 'primary' })
+        ], 'stage');
       }
     }
   ];

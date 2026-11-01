@@ -144,7 +144,7 @@
         BG
       ],
       render: function (p, c) {
-        var pic = !p.image && c.look === 'label' ? jarSVG(c) : !p.image && c.look === 'unit' ? unitSVG() : img(p.image, c, 'sp-hero-img', p.headline);
+        var pic = c.look === 'stage' ? '' : !p.image && c.look === 'label' ? jarSVG(c) : !p.image && c.look === 'unit' ? unitSVG() : img(p.image, c, 'sp-hero-img', p.headline);
         var brand = c.look === 'label' && c.settings && c.settings.businessName ? '<p class="sp-label-brand">' + esc(c.settings.businessName) + '</p>' : '';
         return '<div class="sp-hero sp-al-' + esc(p.align) + (pic ? ' has-pic' : '') + '"><div class="sp-hero-copy">' + brand +
           (c.editor || c.thumb ? '<h2 class="sp-h1">' + rich(p.headline) + '</h2>' : '<h1 class="sp-h1">' + rich(p.headline) + '</h1>') +
@@ -472,8 +472,25 @@
     return wa ? '<div class="sp-fixed">' + wa + '</div>' : '';
   };
 
+  /* Stage style: the product photo holds one half of the screen while the other half scrolls. */
+  SP.stageMedia = function (page, ctx) {
+    var hero = page.blocks.find(function (b) { return b.type === 'hero'; });
+    var hp = hero ? hero.props : {}, s = page.settings || {};
+    var name = String(hp.headline || s.businessName || page.name || '').replace(/\*\*/g, '');
+    var fieldName = s.businessName || name;
+    var media = hp.image ? '<img src="' + esc(hp.image) + '" alt="' + esc(name) + '">' :
+      '<div class="sp-stage-field"><span>' + esc(fieldName) + '</span>' + (ctx.editor ? '<small>Add your product photo in the Headline section</small>' : '') + '</div>';
+    var bar = (hp.eyebrow || s.businessName) ? '<div class="sp-stage-bar"><span>' + esc(hp.eyebrow || '') + '</span><span>' + (hp.image ? esc(s.businessName || '') : '') + '</span></div>' : '';
+    return '<aside class="sp-stage-media"' + (hero ? ' data-stage-for="' + hero.id + '"' : '') + '>' + media + bar + '</aside>';
+  };
+  SP.wrapStage = function (page, ctx, sections) {
+    return '<div class="sp-stage">' + SP.stageMedia(page, ctx) + '<div class="sp-stage-col">' + sections + '</div></div>';
+  };
+
   SP.renderPage = function (page, ctx) {
     ctx = Object.assign({ lang: (page.settings && page.settings.lang) || 'ms', settings: page.settings, look: page.theme.look || 'classic' }, ctx);
-    return page.blocks.map(function (b) { return SP.renderSection(b, ctx); }).join('') + SP.renderFixed(page, ctx);
+    var body = page.blocks.map(function (b) { return SP.renderSection(b, ctx); }).join('');
+    if (ctx.look === 'stage') body = SP.wrapStage(page, ctx, body);
+    return body + SP.renderFixed(page, ctx);
   };
 })(window.SP);

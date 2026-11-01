@@ -414,6 +414,7 @@
     if (!p.blocks.length) {
       html = '<div class="ed-empty">' + icon('plus') + '<b>Your page is empty</b><span>Drag a section here from the left, or tap “Add section”.</span></div>';
     }
+    if (p.theme.look === 'stage' && p.blocks.length) html = SP.wrapStage(p, ctx, html);
     root.innerHTML = '<div class="' + SP.pageClass(p) + '" style="' + esc(SP.themeVars(p.theme)) + '">' + html + SP.renderFixed(p, ctx) + '</div>';
     SP_initPage(root);
   }
@@ -443,6 +444,8 @@
     canvas.addEventListener('click', function (e) {
       var a = e.target.closest('a');
       if (a && a.closest('#page-root')) e.preventDefault();
+      var stage = e.target.closest('[data-stage-for]');
+      if (stage) { select(stage.getAttribute('data-stage-for')); if (narrow()) setDrawer('insp'); return; }
       var blk = e.target.closest('.ed-blk');
       if (!blk) {
         if (e.target === canvas || e.target.id === 'frame') { select(null); }

@@ -57,6 +57,7 @@ window.SP = window.SP || {};
     malam:    { label: 'Malam',     primary: '#e3ad48', accent: '#e3ad48', bg: '#111315', text: '#eef0ec' },
     cili:     { label: 'Cili',      primary: '#b3261e', accent: '#b3261e', bg: '#ffffff', text: '#23140f', alt: '#e3e1dc' },
     bab:      { label: 'Bab',       primary: '#fe7141', accent: '#000000', bg: '#ffffff', text: '#000000', alt: '#f0ff1c' },
+    marun:    { label: 'Marun',     primary: '#7d0c14', accent: '#7d0c14', bg: '#e2e2e2', text: '#5e0a10', alt: '#d6d6d6' },
     langit:   { label: 'Langit',    primary: '#0a0a0a', accent: '#0a0a0a', bg: '#cbe4f2', text: '#0a0a0a', alt: '#f1e3b5' }
   };
 
@@ -65,7 +66,8 @@ window.SP = window.SP || {};
     classic:  { label: 'Classic',  hint: 'Clean sections, heading beside its content' },
     label:    { label: 'Label',    hint: 'The page is your product label' },
     chapters: { label: 'Chapters', hint: 'Each section a full colour field' },
-    unit:     { label: 'Shape',    hint: 'One big shape runs through the page' }
+    unit:     { label: 'Shape',    hint: 'One big shape runs through the page' },
+    stage:    { label: 'Stage',    hint: 'Your photo stays put while the words scroll' }
   };
 
   SP.fonts = {
@@ -75,6 +77,7 @@ window.SP = window.SP || {};
     mesra:  { label: 'Friendly', h: "'Gabarito', system-ui, sans-serif", b: "'Gabarito', system-ui, sans-serif", q: 'Gabarito:wght@400;600;800' },
     slab:   { label: 'Slab',     h: "'Zilla Slab', Georgia, serif", b: "'Zilla Slab', Georgia, serif", q: 'Zilla+Slab:wght@400;500;600;700' },
     hanken: { label: 'Plain',    h: "'Hanken Grotesk', system-ui, sans-serif", b: "'Hanken Grotesk', system-ui, sans-serif", q: 'Hanken+Grotesk:wght@400;500;600' },
+    literata: { label: 'Book',   h: "'Literata', Georgia, serif", b: "'Literata', Georgia, serif", q: 'Literata:opsz,wght@7..72,400;7..72,500;7..72,600' },
     stack:  { label: 'Soft',     h: "'Stack Sans Headline', system-ui, sans-serif", b: "'Stack Sans Text', system-ui, sans-serif", q: 'Stack+Sans+Headline:wght@300;400&family=Stack+Sans+Text:wght@400;500' }
   };
   SP.fontsURL = function (keys) {

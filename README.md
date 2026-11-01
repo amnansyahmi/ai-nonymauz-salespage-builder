@@ -47,7 +47,7 @@ css/app.css       builder interface
 js/core.js        helpers, colour themes, fonts, page words (BM/EN)
 js/blocks.js      every section type: default content, edit fields, HTML output
 js/page-css.js    styles for the salespage (shared by editor and exported file)
-js/looks-css.js   layout styles: Label, Chapters, Shape
+js/looks-css.js   layout styles: Label, Chapters, Shape, Stage
 js/runtime.js     order form + countdown logic (copied into every exported page)
 js/templates.js   starter templates
 js/store.js       saving pages in the browser

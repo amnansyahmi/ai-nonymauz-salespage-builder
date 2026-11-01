@@ -118,5 +118,50 @@
     '}'
   ];
 
-  SP.pageCSS += '\n' + label.concat(chapters, unit).join('\n');
+
+  var stage = [
+    /* two panels on 12px margins: the reading column and the photograph that stays put */
+    '.look-stage .sp-stage{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:12px}',
+    '.look-stage .sp-stage-col{container-type:inline-size;min-width:0;border-radius:20px;overflow:clip;position:relative;z-index:1}',
+    '.look-stage .sp-stage-media{position:relative;height:56svh;border-radius:20px;overflow:hidden;background:var(--p);z-index:0}',
+    '.look-stage .sp-stage-media img{width:100%;height:100%;object-fit:cover;display:block}',
+    '.look-stage .sp-stage-field{height:100%;display:flex;flex-direction:column;gap:16px;align-items:flex-start;justify-content:flex-end;text-align:left;padding:clamp(24px,4cqi,48px);color:var(--onp)}',
+    '.look-stage .sp-stage-field span{font-family:var(--fh);font-weight:500;font-size:clamp(2.4rem,6.2cqi,5.2rem);line-height:.98;letter-spacing:-.03em;max-width:none;text-wrap:balance}',
+    '.look-stage .sp-stage-field small{font-size:var(--fs);opacity:.85}',
+    '.look-stage .sp-stage-bar{position:absolute;left:0;right:0;bottom:0;min-height:56px;display:none;justify-content:space-between;align-items:center;gap:16px;padding:8px 20px;background:var(--bg);color:var(--tx0);font-size:var(--fs)}',
+    '@container (min-width:900px){.look-stage .sp-stage{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.look-stage .sp-stage-media{order:2;position:sticky;top:12px;height:calc(100svh - 24px)}}',
+    '@container sppage (min-width:900px){.look-stage .sp-stage-bar{display:flex}.look-stage .sp-hero .sp-fact{display:none}.look-stage .sp-stage-field{padding-bottom:96px}}',
+    
+    '.ed-frame .look-stage .sp-stage-media{height:min(56svh,520px);cursor:pointer}',
+    '@container (min-width:900px){.ed-frame .look-stage .sp-stage-media{height:calc(100vh - 120px)}}',
+    /* a calm reading column: one measure, modest headings, the text face throughout */
+    '.look-stage .sp-sec{padding:clamp(44px,9cqi,80px) clamp(20px,7cqi,64px)}',
+    '.look-stage .sp-wrap{max-width:560px;gap:28px}',
+    '.look-stage .sp-h1{font-weight:500;letter-spacing:-.02em;line-height:1.05;font-size:clamp(2.4rem,8.5cqi,3.8rem)!important;max-width:14ch}',
+    '.look-stage .sp-h2{font-weight:500;letter-spacing:-.02em;line-height:1.05;font-size:clamp(1.9rem,6cqi,2.75rem);max-width:none}',
+    '.look-stage .sp-hero .sp-hero-copy{display:flex!important;align-items:center;text-align:center;max-width:none}',
+    '.look-stage .sp-hero .sp-h1,.look-stage .sp-hero .sp-lead{margin-inline:auto}',
+    '.look-stage .sp-hero .sp-btn{align-self:stretch;width:100%}',
+    '.look-stage .sp-split{grid-template-columns:minmax(0,1fr)!important;gap:24px}',
+    '.look-stage .sp-bg-soft{--sbg:var(--alt);--tx:var(--tx0)}',
+    '.look-stage .sp-btn{border-radius:12px}',
+    /* the order form set as a printed price list: name, dot leader, price */
+    '.look-stage .sp-order{background:none;padding:0;border-radius:0}',
+    '.look-stage .sp-items{gap:4px}',
+    '.look-stage .sp-item{background:none!important;padding:14px 0;border-radius:0;outline-offset:6px}',
+    '.look-stage .sp-item.is-on{outline:none}',
+    '.look-stage .sp-item.is-on .sp-item-name,.look-stage .sp-item.is-on .sp-price b{color:var(--p)}',
+    '.look-stage .sp-item-body{display:grid;grid-template-columns:auto minmax(16px,1fr) auto;grid-template-areas:"name lead price" "desc desc desc";column-gap:10px;align-items:baseline}',
+    '.look-stage .sp-item-body::before{content:"";grid-area:lead;border-bottom:3px dotted var(--line);transform:translateY(-.3em)}',
+    '.look-stage .sp-item-name{grid-area:name;font-weight:600}',
+    '.look-stage .sp-item-desc{grid-area:desc}',
+    '.look-stage .sp-price{grid-area:price;margin:0}',
+    '.look-stage .sp-qty{background:var(--alt)}',
+    '.look-stage .sp-radio{background:none!important;padding:10px 0;outline:none}',
+    '.look-stage .sp-field input,.look-stage .sp-field textarea{background:var(--bg);border-radius:8px}',
+    '.look-stage .sp-sum{padding-top:16px;border-top:3px dotted var(--line)}',
+    '.look-stage .sp-faq details{border-radius:12px;background:var(--alt)}'
+  ];
+
+  SP.pageCSS += '\n' + label.concat(chapters, unit, stage).join('\n');
 })(window.SP);

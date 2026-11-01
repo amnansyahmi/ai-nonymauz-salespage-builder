@@ -6,7 +6,7 @@
 (function (SP) {
   'use strict';
   SP.pageCSS = [
-    '.sp-page{container-type:inline-size;background:var(--bg);color:var(--tx0);font-family:var(--fb);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;position:relative}',
+    '.sp-page{container:sppage / inline-size;background:var(--bg);color:var(--tx0);font-family:var(--fb);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;position:relative}',
     /* five sizes: display, section title, middle, body, small */
     '.sp-page>*{--fx:clamp(2.6rem,9cqi,6rem);--f2:clamp(1.9rem,4.8cqi,3.2rem);--fm:clamp(1.2rem,2.2cqi,1.35rem);--fs:15px}',
     '.sp-page *,.sp-page *::before,.sp-page *::after{box-sizing:border-box}',
