@@ -59,10 +59,6 @@
     '.look-chapters .sp-split,.look-chapters .sp-countdown{grid-template-columns:minmax(0,1fr)!important;gap:40px}',
     '.look-chapters .sp-bonus.sp-bonus-sum{background:var(--tx);color:var(--sbg)}',
     '.look-chapters .sp-bonus-sum .sp-bonus-v{color:var(--sbg)}',
-    '.look-chapters .sp-order{background:var(--bg);color:var(--tx0);--tx:var(--tx0);--sbg:var(--bg);--mut:color-mix(in srgb,var(--tx0) 74%,var(--bg));--line:color-mix(in srgb,var(--tx0) 18%,var(--bg));--card:color-mix(in srgb,var(--tx0) 5%,var(--bg));--card2:color-mix(in srgb,var(--tx0) 9%,var(--bg))}',
-    '.look-chapters .sp-order .sp-small,.look-chapters .sp-order .sp-item-desc{color:var(--mut)}',
-    '.look-chapters .sp-order .sp-btn{background:var(--tx0);color:var(--bg)}',
-    '.look-chapters .sp-order .sp-btn-wa{background:#15803d;color:#fff}',
     /* two sizes: statement and caption; medium weight, no bold */
     '.look-chapters .sp-h1,.look-chapters .sp-h2,.look-chapters .sp-guarantee-mark,.look-chapters .sp-bigprice b,.look-chapters .sp-cd-u b,.look-chapters .sp-footer-name{font-weight:500;letter-spacing:-.05em;line-height:.9}',
     '.look-chapters .sp-hero .sp-h1{font-size:clamp(3rem,13cqi,11rem);max-width:none}',
@@ -75,7 +71,6 @@
     '.look-chapters .sp-points li{font-weight:400}',
     '.look-chapters .sp-review blockquote{font-weight:500;font-size:clamp(1.4rem,3cqi,2rem);letter-spacing:-.02em}',
     '.look-chapters .sp-faq details,.look-chapters .sp-bonus{border-radius:0;background:color-mix(in srgb,var(--tx) 9%,var(--sbg))}',
-    '.look-chapters .sp-order{border-radius:0}',
     '.look-chapters .sp-stars{color:currentColor}',
     /* the price printed on a ticket with a stub */
     '.look-chapters .sp-offer{gap:0;background:var(--bg);color:var(--tx0);--tx:var(--tx0);--mut:var(--tx0);position:relative}',
@@ -106,8 +101,7 @@
     '.look-unit .sp-mark::before{content:"";position:absolute;inset:0;border-radius:5px 5px 3px 3px;background:currentColor}',
     '.look-unit .sp-mark::after{content:"";position:absolute;left:4px;right:4px;bottom:3px;height:2px;border-radius:2px;background:var(--sbg)}',
     '.look-unit .sp-mark-check{color:var(--tx)}',
-    '.look-unit .sp-order,.look-unit .sp-faq details,.look-unit .sp-bonus{border-radius:var(--u-r)}',
-    '.look-unit .sp-item,.look-unit .sp-radio{border-radius:calc(var(--u-r) * .6)}',
+    '.look-unit .sp-faq details,.look-unit .sp-bonus{border-radius:var(--u-r)}',
     '.look-unit .sp-bg-primary,.look-unit .sp-bg-dark{--sbg:var(--tx0);--tx:var(--bg)}',
     '.look-unit .sp-bg-primary .sp-btn,.look-unit .sp-bg-dark .sp-btn{background:#ffffff;color:var(--tx0)}',
     '@container (max-width:859px){',
@@ -146,20 +140,16 @@
     '.look-stage .sp-bg-soft{--sbg:var(--alt);--tx:var(--tx0)}',
     '.look-stage .sp-btn{border-radius:12px}',
     /* the order form set as a printed price list: name, dot leader, price */
-    '.look-stage .sp-order{background:none;padding:0;border-radius:0}',
+    '.look-stage .sp-order{--fbg:var(--bg);background:none;padding:0;border:0;border-radius:0}',
     '.look-stage .sp-items{gap:4px}',
-    '.look-stage .sp-item{background:none!important;padding:14px 0;border-radius:0;outline-offset:6px}',
-    '.look-stage .sp-item.is-on{outline:none}',
-    '.look-stage .sp-item.is-on .sp-item-name,.look-stage .sp-item.is-on .sp-price b{color:var(--p)}',
+    '.look-stage .sp-item{border-bottom:0}',
+        '.look-stage .sp-item.is-on .sp-item-name,.look-stage .sp-item.is-on .sp-price b{color:var(--p)}',
     '.look-stage .sp-item-body{display:grid;grid-template-columns:auto minmax(16px,1fr) auto;grid-template-areas:"name lead price" "desc desc desc";column-gap:10px;align-items:baseline}',
     '.look-stage .sp-item-body::before{content:"";grid-area:lead;border-bottom:3px dotted var(--line);transform:translateY(-.3em)}',
     '.look-stage .sp-item-name{grid-area:name;font-weight:600}',
     '.look-stage .sp-item-desc{grid-area:desc}',
     '.look-stage .sp-price{grid-area:price;margin:0}',
-    '.look-stage .sp-qty{background:var(--alt)}',
-    '.look-stage .sp-radio{background:none!important;padding:10px 0;outline:none}',
-    '.look-stage .sp-field input,.look-stage .sp-field textarea{background:var(--bg);border-radius:8px}',
-    '.look-stage .sp-sum{padding-top:16px;border-top:3px dotted var(--line)}',
+            '.look-stage .sp-sum{background:none;padding:16px 0 0;border-top:3px dotted var(--line);border-radius:0}',
     '.look-stage .sp-faq details{border-radius:12px;background:var(--alt)}'
   ];
 

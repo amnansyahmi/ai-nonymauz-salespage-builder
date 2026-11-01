@@ -257,7 +257,7 @@
         var items = p.items || [];
         var rows = items.map(function (it, i) {
           var old = Number(it.oldPrice) > Number(it.price) ? '<s>' + SP.money(it.oldPrice, cur) + '</s>' : '';
-          var hasImg = it.image || c.editor;
+          var hasImg = !!it.image;
           return '<div class="sp-item' + (hasImg ? '' : ' sp-item-noimg') + '">' +
             (hasImg ? img(it.image, c, 'sp-item-img', it.name) : '') +
             '<div class="sp-item-body"><div class="sp-item-name">' + esc(it.name) + (it.badge ? ' <span class="sp-badge">' + esc(it.badge) + '</span>' : '') + '</div>' +
@@ -266,7 +266,7 @@
             '<div class="sp-qty"><button type="button" data-d="-1" aria-label="Kurang">−</button><input type="number" min="0" max="999" inputmode="numeric" value="' + (i === 0 ? 1 : 0) + '" aria-label="' + esc(it.name) + '"><button type="button" data-d="1" aria-label="Tambah">+</button></div></div>';
         }).join('');
         var ship = (p.shipping || []);
-        var shipHtml = ship.length ? '<fieldset class="sp-ship"><legend>' + esc(p.shipLabel || 'Penghantaran') + '</legend>' + ship.map(function (s, i) {
+        var shipHtml = ship.length ? '<fieldset class="sp-ship" data-ui><legend>' + esc(p.shipLabel || 'Penghantaran') + '</legend>' + ship.map(function (s, i) {
           return '<label class="sp-radio"><input type="radio" name="ship-' + esc(bid) + '" value="' + i + '"' + (i === 0 ? ' checked' : '') + '><span>' + esc(s.label) + '</span><b>' + (Number(s.fee) ? SP.money(s.fee, cur) : L.free) + '</b></label>';
         }).join('') + (Number(p.freeShipMin) > 0 ? '<p class="sp-small">' + L.freeShipFrom + ' ' + SP.money(p.freeShipMin, cur) + '</p>' : '') + '</fieldset>' : '';
         var cfg = {
@@ -285,10 +285,10 @@
         };
         return split(head(p.heading, p.sub),
           '<form class="sp-order" novalidate data-cfg="' + esc(JSON.stringify(cfg)) + '">' +
-          '<div class="sp-items">' + rows + '</div>' + shipHtml +
+          '<div class="sp-items" data-ui>' + rows + '</div>' + shipHtml +
           '<fieldset class="sp-cust"><legend>' + L.customer + '</legend>' + f('name', L.name, 'text', true) + f('phone', L.phone, 'tel', true) +
           (p.askAddress ? f('address', L.address, 'textarea', true) : '') + (p.askNote ? f('note', L.note, 'text') : '') + '</fieldset>' +
-          '<div class="sp-sum"><div><span>' + L.subtotal + '</span><b data-o="sub">RM0</b></div>' +
+          '<div class="sp-sum" data-ui><div><span>' + L.subtotal + '</span><b data-o="sub">RM0</b></div>' +
           (ship.length ? '<div><span>' + esc(p.shipLabel || 'Penghantaran') + '</span><b data-o="ship">RM0</b></div>' : '') +
           '<div class="sp-sum-total"><span>' + L.total + '</span><b data-o="total">RM0</b></div></div>' +
           '<p class="sp-err" role="alert" hidden></p>' +

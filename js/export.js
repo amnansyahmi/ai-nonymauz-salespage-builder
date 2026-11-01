@@ -12,14 +12,16 @@
   }
   function plain(s) { return String(s || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim(); }
 
-  SP.exportHTML = function (page) {
+  /* opts.preview: the same file, minus ad tracking, for the editor's preview */
+  SP.exportHTML = function (page, opts) {
+    opts = opts || {};
     var s = page.settings, t = page.theme;
     var hero = page.blocks.find(function (b) { return b.type === 'hero'; });
     var title = s.seoTitle || plain(hero && hero.props.headline) || page.name;
     var desc = s.seoDesc || plain(hero && hero.props.sub) || '';
     var og = firstImage(page);
     var hasSticky = s.sticky && s.stickyText;
-    var pixel = /^\d{5,20}$/.test(String(s.pixelId || '').trim()) ? (
+    var pixel = !opts.preview && /^\d{5,20}$/.test(String(s.pixelId || '').trim()) ? (
       '<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};' +
       "if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];" +
       "s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','" + s.pixelId.trim() + "');fbq('track','PageView');</script>"

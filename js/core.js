@@ -103,6 +103,7 @@ window.SP = window.SP || {};
     return [
       '--p:' + t.primary, '--a:' + t.accent, '--bg:' + t.bg, '--tx0:' + t.text,
       '--onp:' + SP.onColor(t.primary), '--ona:' + SP.onColor(t.accent),
+      '--fbg:' + (SP.onColor(t.bg) === '#141414' ? '#ffffff' : '#1b1e21'), '--ftx:' + (SP.onColor(t.bg) === '#141414' ? t.text : '#f1f2ef'),
       '--alt:' + (t.alt || 'color-mix(in srgb,' + t.primary + ' 16%,' + t.bg + ')'), '--onalt:' + (t.alt ? SP.onColor(t.alt) : t.text),
       '--fh:' + f.h, '--fb:' + f.b, '--r:' + c.r, '--rb:' + c.rb
     ].join(';');

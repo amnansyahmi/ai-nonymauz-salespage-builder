@@ -811,32 +811,27 @@
   }
 
   /* ================= PREVIEW ================= */
+  /* Preview shows the exact file that Publish downloads, so what you see is what buyers get. */
   function openPreview() {
     saveNow();
     var dev = S.device;
     var ov = h('div', { class: 'overlay preview', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Preview' });
-    ov.innerHTML = '<div class="ov-bar"><h2>Preview</h2><span class="ov-note">This is what customers see. Try the order form.</span>' +
+    ov.innerHTML = '<div class="ov-bar"><h2>Preview</h2><span class="ov-note">Exactly what buyers see. The order form and buttons work.</span>' +
       '<div class="seg"><button type="button" data-dev="desktop">' + icon('desktop') + '<span>Computer</span></button><button type="button" data-dev="mobile">' + icon('mobile') + '<span>Phone</span></button></div>' +
       '<button type="button" class="btn primary" data-close>Back to editing</button></div>' +
-      '<div class="ov-body"><div class="pv-frame" id="pv-frame">' + pageFrame(S.page, { preview: true, lang: S.page.settings.lang, settings: S.page.settings }) + '</div></div>';
+      '<div class="ov-body"><div class="pv-frame" id="pv-frame"></div></div>';
     document.body.appendChild(ov);
+    var frame = h('iframe', { title: 'Preview of ' + S.page.name, sandbox: 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox' });
+    frame.srcdoc = SP.exportHTML(S.page, { preview: true });
+    $('#pv-frame', ov).appendChild(frame);
     var setDev = function (d) {
       dev = d;
       $('#pv-frame', ov).classList.toggle('mobile', d === 'mobile');
       $$('.seg button', ov).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-dev') === d); });
     };
-    setDev(dev);
+    setDev(narrow() ? 'mobile' : dev);
     $$('.seg button', ov).forEach(function (b) { b.addEventListener('click', function () { setDev(b.getAttribute('data-dev')); }); });
-    var pv = $('#pv-frame', ov);
-    SP_initPage(pv);
-    pv.addEventListener('click', function (e) {
-      var a = e.target.closest('a[href^="#"]');
-      if (!a) return;
-      e.preventDefault();
-      var tgt = pv.querySelector(a.getAttribute('href') === '#order' ? '#order' : a.getAttribute('href'));
-      if (tgt) tgt.scrollIntoView({ behavior: 'smooth' });
-    });
-    var close = function () { (pv.__spTimers || []).forEach(clearInterval); ov.remove(); document.removeEventListener('keydown', esc1); };
+    var close = function () { ov.remove(); document.removeEventListener('keydown', esc1); };
     var esc1 = function (e) { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', esc1);
     $('[data-close]', ov).addEventListener('click', close);

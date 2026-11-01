@@ -82,7 +82,9 @@ function SP_initPage(root) {
       }
       if (!cfg.wa) return fail(L.noWa);
       if (window.fbq) { try { window.fbq('track', 'Lead', { value: st.total, currency: 'MYR' }); } catch (x) {} }
-      window.location.href = 'https://wa.me/' + cfg.wa + '?text=' + encodeURIComponent(msg);
+      var waUrl = 'https://wa.me/' + cfg.wa + '?text=' + encodeURIComponent(msg);
+      if (window.self !== window.top) window.open(waUrl, '_blank', 'noopener');
+      else window.location.href = waUrl;
     });
     update();
   });
