@@ -6,6 +6,14 @@ function SP_initPage(root) {
   (root.__spTimers || []).forEach(clearInterval);
   root.__spTimers = [];
 
+  var tracking = root === document && window.SP_TRACKING;
+  function track(event, extra) {
+    if(!tracking) return;
+    var body = Object.assign({event:event,slug:tracking.slug},extra||{});
+    try { return fetch('/api/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:true,signal:AbortSignal.timeout(4000)}).catch(function(){}); } catch(e) {}
+  }
+  if(tracking){track('visit');root.addEventListener('click',function(e){if(e.target.closest('a.sp-btn'))track('cta');if(e.target.closest('a.sp-wa'))track('whatsapp');});}
+
   /* ---------- order forms ---------- */
   root.querySelectorAll('.sp-order').forEach(function (form) {
     if (form.__spBound) return;
@@ -26,15 +34,18 @@ function SP_initPage(root) {
     function state() {
       var q = inputs.map(function (i) { return Math.max(0, Math.min(999, parseInt(i.value, 10) || 0)); });
       var sub = 0;
-      (cfg.items || []).forEach(function (it, i) { sub += (q[i] || 0) * it.price; });
+      (cfg.items || []).forEach(function (it, i) { sub += (q[i] || 0) * Math.max(0, Number(it.price)||0); });
       var r = form.querySelector('.sp-ship input:checked');
       var s = r ? cfg.shipping[+r.value] : null;
-      var fee = s ? s.fee : 0;
+      var fee = s ? Math.max(0,Number(s.fee)||0) : 0;
       if (cfg.freeShipMin && sub >= cfg.freeShipMin) fee = 0;
-      return { q: q, sub: sub, ship: s, fee: fee, total: sub + fee };
+      return { q: q, sub: sub, ship: s, fee: fee, total: Math.round((sub + fee)*100)/100 };
     }
     function update() {
       var st = state();
+      var address = form.querySelector('[name="address"]');
+      if(address){address.closest('label').hidden=!!(st.ship&&st.ship.pickup);address.required=!!cfg.askAddress&&!(st.ship&&st.ship.pickup);}
+      inputs.forEach(function(i,idx){i.value=st.q[idx];});
       inputs.forEach(function (i, idx) { i.closest('.sp-item').classList.toggle('is-on', st.q[idx] > 0); });
       if (out('sub')) out('sub').textContent = fmt(st.sub);
       if (out('ship')) out('ship').textContent = st.ship && st.fee === 0 ? (L.free || 'FREE') : fmt(st.fee);
@@ -57,7 +68,9 @@ function SP_initPage(root) {
       err.hidden = true;
       if (!st.q.some(function (x) { return x > 0; })) return fail(L.pickItem);
       if (!v('name') || !v('phone')) return fail(L.needName);
-      if (cfg.askAddress && !v('address')) return fail(L.needAddr);
+      if ((!/^[+()\d\s-]{8,25}$/.test(v('phone')) || !/^\d{8,15}$/.test(v('phone').replace(/\D/g,'')))) return fail(cfg.currency === 'RM' && (L.total === 'Jumlah') ? 'Sila isi nombor telefon yang sah.' : 'Please enter a valid phone number.');
+      if (cfg.askSchedule && (!v('date') || !v('time') || !(new Date(v('date')+'T'+v('time')).getTime() > Date.now()))) return fail(L.total === 'Jumlah' ? 'Sila pilih tarikh dan masa akan datang.' : 'Please choose a future date and time.');
+      if (cfg.askAddress && !(st.ship && st.ship.pickup) && !v('address')) return fail(L.needAddr);
 
       var lines = [L.orderIntro + (cfg.page ? ' (' + cfg.page + ')' : '') + ':', ''];
       (cfg.items || []).forEach(function (it, i) {
@@ -66,7 +79,9 @@ function SP_initPage(root) {
       if (st.ship) lines.push(cfg.shipLabel + ': ' + st.ship.label + ' (' + (st.fee ? fmt(st.fee) : L.free) + ')');
       lines.push('*' + L.total + ': ' + fmt(st.total) + '*', '');
       lines.push(L.name + ': ' + v('name'), L.phone + ': ' + v('phone'));
-      if (v('address')) lines.push(L.address + ': ' + v('address'));
+      if (v('variant')) lines.push((L.total === 'Jumlah' ? 'Pilihan' : 'Variant') + ': ' + v('variant'));
+      if (v('date')) lines.push((L.total === 'Jumlah' ? 'Tarikh pilihan' : 'Preferred date') + ': ' + v('date') + ' ' + v('time'));
+      if (!(st.ship && st.ship.pickup) && v('address')) lines.push(L.address + ': ' + v('address'));
       if (v('note')) lines.push(L.note.replace(/\s*\(.*\)/, '') + ': ' + v('note'));
       var msg = lines.join('\n');
 
@@ -81,6 +96,12 @@ function SP_initPage(root) {
         return;
       }
       if (!cfg.wa) return fail(L.noWa);
+      track('whatsapp');
+      var consent=form.querySelector('[name="consent"]');
+      if(cfg.capture && consent && consent.checked){
+        var quantities=st.q,shipInput=form.querySelector('.sp-ship input:checked');
+        track('enquiry',{id:(window.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),form:cfg.formId,quantities:quantities,shipping:shipInput?+shipInput.value:0,consent:true,customer:{name:v('name'),phone:v('phone'),address:st.ship&&st.ship.pickup?'':v('address'),note:v('note'),variant:v('variant'),date:v('date'),time:v('time')}});
+      }
       if (window.fbq) { try { window.fbq('track', 'Lead', { value: st.total, currency: 'MYR' }); } catch (x) {} }
       var waUrl = 'https://wa.me/' + cfg.wa + '?text=' + encodeURIComponent(msg);
       if (window.self !== window.top) window.open(waUrl, '_blank', 'noopener');

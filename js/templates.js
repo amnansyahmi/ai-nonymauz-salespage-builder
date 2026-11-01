@@ -32,7 +32,7 @@
             { name: '1 Botol (250g)', desc: 'Cuba dulu', price: 18, oldPrice: 22, image: '', badge: '' },
             { name: 'Combo 3 Botol', desc: 'Untuk keluarga', price: 48, oldPrice: 66, image: '', badge: 'Paling laris' },
             { name: 'Combo 6 + 1 Percuma', desc: '7 botol, sesuai untuk dijual semula', price: 90, oldPrice: 154, image: '', badge: 'Jimat RM64' }
-          ], shipping: [{ label: 'Semenanjung Malaysia', fee: 8 }, { label: 'Sabah & Sarawak', fee: 15 }, { label: 'Ambil sendiri (Shah Alam)', fee: 0 }], freeShipMin: 90, bg: 'soft' }),
+          ], shipping: [{ label: 'Semenanjung Malaysia', fee: 8 }, { label: 'Sabah & Sarawak', fee: 15 }, { label: 'Ambil sendiri (Shah Alam)', fee: 0, pickup: true }], freeShipMin: 90, bg: 'soft' }),
           B('guarantee', { badge: 'Ganti baru', title: 'Jaminan sampai elok', text: 'Jika botol pecah atau rosak semasa penghantaran, hantar gambar kepada kami dan kami ganti baru.', bg: 'default' }),
           B('faq', { heading: 'Soalan lazim', items: [
             { q: 'Berapa lama boleh tahan?', a: 'Tahan 3 bulan pada suhu bilik. Selepas dibuka, simpan dalam peti sejuk.' },

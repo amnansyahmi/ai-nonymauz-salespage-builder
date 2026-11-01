@@ -45,7 +45,7 @@
   /* Shrink photos before saving so pages stay light and fast. */
   function readImage(file) {
     return new Promise(function (res, rej) {
-      if (!/^image\//.test(file.type)) return rej(new Error('type'));
+      if (file.size > 15 * 1024 * 1024 || !/^image\/(jpeg|png|webp)$/.test(file.type)) return rej(new Error('type'));
       var fr = new FileReader();
       fr.onload = function () {
         var im = new Image();
@@ -64,6 +64,8 @@
     });
   }
 
+  SP.readImage = readImage;
+
   function pageFrame(page, ctx, extraClass) {
     var s = page.settings;
     return '<div class="' + SP.pageClass(page, extraClass) + '" style="' + esc(SP.themeVars(page.theme)) + '">' + SP.renderPage(page, ctx) + '</div>';
@@ -78,7 +80,9 @@
   }
 
   /* ================= ROUTING ================= */
-  function route() {
+  async function route() {
+    if (S.page && !await saveNow()) {history.replaceState(null,'','#edit-'+S.page.id);return;}
+    var oldRoot=$('#page-root');if(oldRoot)(oldRoot.__spTimers||[]).forEach(clearInterval);
     var hash = location.hash.slice(1);
     if (hash.indexOf('edit-') === 0) {
       var p = SP.store.get(hash.slice(5));
@@ -113,8 +117,8 @@
     var order = p.blocks.find(function (b) { return b.type === 'order'; });
     var prices = order ? order.props.items.map(function (i) { return Number(i.price) || 0; }) : [];
     var min = prices.length ? Math.min.apply(null, prices) : 0, max = prices.length ? Math.max.apply(null, prices) : 0;
-    var wa = SP.waNumber(p.settings.whatsapp);
-    var status = !order ? { cls: 'neutral', text: 'No order form' } : !wa ? { cls: 'warn', text: 'No WhatsApp number' } : { cls: 'ok', text: 'Ready to share' };
+    var wa = SP.validWa(p.settings.whatsapp) ? SP.waNumber(p.settings.whatsapp) : '';
+    var status = !order ? { cls: 'neutral', text: 'No order form' } : !SP.validWa(p.settings.whatsapp) ? { cls: 'warn', text: 'Check WhatsApp number' } : { cls: 'ok', text: p.publish ? 'Live page' : 'Draft ready' };
     return {
       sections: p.blocks.length, packages: prices.length, wa: wa, hasOrder: !!order, status: status,
       range: !prices.length ? '—' : (min === max ? SP.money(min) : SP.money(min) + '–' + SP.money(max))
@@ -126,23 +130,24 @@
     document.title = 'Salespages · Nonymauz';
     var pages = SP.store.all().map(function (pg) { return SP.normalizePage(SP.clone(pg)); });
     var facts = pages.map(pageFacts);
-    var notReady = facts.filter(function (f) { return f.hasOrder && !f.wa; }).length;
+    var notReady = facts.filter(function (f) { return !f.hasOrder || !f.wa || !f.packages; }).length;
     var bk = lastBackup();
     var sub;
     if (!pages.length) sub = 'Pick a template below to make your first page. It takes about 10 minutes.';
     else {
-      sub = notReady ? '<b>' + plural(notReady, 'page', 'pages') + ' can’t take orders yet:</b> add a WhatsApp number. ' : '<b>All pages can take orders.</b> ';
+      sub = notReady ? '<b>' + plural(notReady, 'page', 'pages') + ' need attention:</b> check the order form and WhatsApp number. ' : '<b>All pages can take orders.</b> ';
       sub += bk ? 'Last backup ' + relDate(bk).toLowerCase() + '.' : 'Not backed up yet. Pages are saved only in this browser.';
     }
     app.className = 'v-home';
     app.innerHTML =
       '<header class="topbar"><a class="wordmark" href="#">' + logo() + 'Nonymauz</a>' +
-      '<div class="topbar-r"><button type="button" class="btn" id="btn-backup" title="Download a backup of all pages">' + icon('download') + '<span>Back up pages</span></button>' +
+      '<div class="topbar-r"><button type="button" class="btn tertiary" id="btn-workspace">' + icon('globe') + '<span>Cloud workspace</span></button><button type="button" class="btn" id="btn-backup" title="Download a backup of all pages">' + icon('download') + '<span>Back up pages</span></button>' +
       '<label class="btn tertiary" for="restore-file" title="Restore pages from a backup file">' + icon('upload') + '<span>Restore</span></label><input type="file" id="restore-file" accept="application/json,.json" hidden></div></header>' +
       '<main class="sheet"><div class="col">' +
-      '<div class="title-row"><div><h1>Salespages</h1><p class="subline">' + sub + '</p></div>' +
+      '<div class="title-row"><div><h1>Your next order starts here.</h1><p class="subline">' + sub + '</p></div>' +
       '<button type="button" class="btn primary" id="btn-new">' + icon('plus') + 'New page</button></div>' +
 
+      '<div class="studio-stats"><div><span>Your pages</span><strong>' + pages.length + '</strong></div><div><span>Published</span><strong>' + pages.filter(function(p){return p.publish;}).length + '</strong></div><div><span>Ready to launch</span><strong>' + facts.filter(function(f){return f.wa && f.hasOrder;}).length + '</strong></div><div><span>Saved on this device</span><strong class="stat-word">' + (SP.store.mode === 'indexeddb' ? 'On device' : 'Browser') + '</strong></div></div>' +
       '<section class="block" aria-labelledby="h-pages"><div class="block-h"><h2 id="h-pages">Your pages</h2>' + (pages.length ? '<p class="num">' + plural(pages.length, 'page', 'pages') + '</p>' : '') + '</div>' +
       (pages.length ? '<table class="ptable"><thead><tr><th>Page</th><th class="num c-price">Prices</th><th class="c-wa">Orders go to</th><th class="num c-date">Edited</th><th><span class="sr">Actions</span></th></tr></thead><tbody>' +
         pages.map(function (p, i) {
@@ -168,14 +173,13 @@
       }).join('') + '</div></section>' +
       '</div></main>';
 
+    $('#btn-workspace').onclick = function(){SP.openWorkspace(renderHome);};
     var fit = function (t) { if (t.clientWidth) t.style.setProperty('--k', (t.clientWidth / 1200).toFixed(4)); };
     if (window.ResizeObserver) { var ro = new ResizeObserver(function (es) { es.forEach(function (e) { fit(e.target); }); }); $$('.thumb', app).forEach(function (t) { ro.observe(t); }); }
     else $$('.thumb', app).forEach(fit);
     $$('.tpl', app).forEach(function (card) {
       $('.tpl-go', card).addEventListener('click', function () {
-        var p = SP.createFromTemplate(card.getAttribute('data-tpl'));
-        if (!SP.store.put(p)) return toast('Browser storage is full. Delete an old page or use smaller photos.');
-        location.hash = 'edit-' + p.id;
+        SP.openSetup(card.getAttribute('data-tpl'));
       });
     });
     $('#btn-new').addEventListener('click', function () {
@@ -202,13 +206,7 @@
       var f = e.target.files[0];
       if (!f) return;
       f.text().then(function (txt) {
-        var data = JSON.parse(txt);
-        var incoming = (data.pages || []).map(SP.normalizePage);
-        var cur = SP.store.all();
-        incoming.forEach(function (p) { if (!cur.some(function (c) { return c.id === p.id; })) cur.push(p); });
-        SP.store.replaceAll(cur);
-        toast('Restored ' + plural(incoming.length, 'page', 'pages'));
-        renderHome();
+        SP.openRestore(JSON.parse(txt), renderHome);
       }).catch(function () { toast('That file is not a Nonymauz backup.'); });
     });
   }
@@ -223,10 +221,10 @@
     btn.setAttribute('aria-expanded', 'true');
     var m = h('div', { class: 'menu', role: 'menu' });
     var item = function (label, ic, cls, fn) { var b = h('button', { type: 'button', role: 'menuitem', class: cls || '' }, icon(ic) + esc(label)); b.addEventListener('click', fn); m.appendChild(b); return b; };
-    item('Duplicate', 'copy', '', function () {
-      var p = SP.store.get(id); p.id = SP.uid(); p.name += ' (copy)';
+    item('Duplicate', 'copy', '', async function () {
+      var p = SP.store.get(id); p.id = SP.uid(); p.name += ' (copy)'; delete p.publish;
       closeMenus();
-      SP.store.put(p) ? (toast('Duplicated ' + name), renderHome()) : toast('Browser storage is full.');
+      await SP.store.put(p) ? (toast('Duplicated ' + name), renderHome()) : toast('Browser storage is full.');
     });
     item('Delete page…', 'trash', 'danger', function (e) {
       e.stopPropagation();
@@ -234,7 +232,7 @@
       var r = h('div', { class: 'row' });
       var del = h('button', { type: 'button', class: 'btn sm danger-fill' }, 'Delete page');
       var cancel = h('button', { type: 'button', class: 'btn sm' }, 'Cancel');
-      del.addEventListener('click', function () { SP.store.remove(id); closeMenus(); toast('Deleted ' + name); renderHome(); });
+      del.addEventListener('click', async function () { if(!await SP.store.remove(id)) return toast('Could not delete this page.'); closeMenus(); toast('Deleted ' + name); renderHome(); });
       cancel.addEventListener('click', closeMenus);
       r.appendChild(del); r.appendChild(cancel); m.appendChild(r);
       cancel.focus();
@@ -266,13 +264,13 @@
       '<span class="vdiv" aria-hidden="true"></span>' +
       '<button type="button" class="icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo">' + icon('undo') + '</button>' +
       '<button type="button" class="icon-btn" id="btn-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">' + icon('redo') + '</button>' +
-      '<span class="vdiv" aria-hidden="true"></span>' +
+      '<button type="button" class="icon-btn" id="btn-history" title="Version history" aria-label="Version history">' + icon('undo') + '</button><button type="button" class="icon-btn" id="btn-insights" title="Page activity" aria-label="Page activity">' + icon('chart') + '</button>' +
       '<button type="button" class="btn" id="btn-preview" aria-label="Preview">' + icon('eye') + '<span>Preview</span></button>' +
       '<button type="button" class="btn primary" id="btn-publish" aria-label="Publish">' + icon('download') + '<span>Publish</span></button></div></header>' +
       '<aside class="ed-lib" id="lib" aria-label="Sections"></aside>' +
       '<main class="ed-canvas" id="canvas"><h1 class="sr" id="ed-h1">' + esc(page.name) + '</h1><div class="ed-frame" id="frame"><div class="drop-line" id="drop-line" hidden></div><div id="page-root"></div></div></main>' +
       '<aside class="ed-insp" id="insp" aria-label="Edit"></aside>' +
-      '<nav class="ed-tabs" aria-label="Panels"><button type="button" data-drawer="lib">' + icon('plus') + 'Add section</button>' +
+      '<nav class="ed-tabs" aria-label="Panels"><button type="button" data-drawer="lib">' + icon('plus') + 'Sections</button>' +
       '<button type="button" data-drawer="insp">' + icon('sliders') + '<span id="tab-edit-label">Page settings</span></button></nav>' +
       '<div class="ed-scrim" id="scrim"></div></div>';
 
@@ -296,6 +294,8 @@
     $('#btn-redo').addEventListener('click', redo);
     $('#btn-preview').addEventListener('click', openPreview);
     $('#btn-publish').addEventListener('click', openPublish);
+    $('#btn-history').onclick = async function(){if(!await saveNow())return;SP.openHistory(S.page,async function(p){if(!await SP.store.put(p))throw new Error('Could not restore this version. Your current draft is unchanged.');openEditor(p);});};
+    $('#btn-insights').onclick = function(){SP.openInsights(S.page);};
     $$('.ed-tabs button').forEach(function (b) {
       b.addEventListener('click', function () { setDrawer(S.drawer === b.getAttribute('data-drawer') ? null : b.getAttribute('data-drawer')); });
     });
@@ -328,27 +328,36 @@
     if (opts.canvas !== false) renderCanvas();
     if (opts.insp) renderInspector();
     if (opts.lib) renderLibrary();
-    scheduleSave(); updateUndo(); updateStatus(); refreshPreviews();
+    scheduleSave(); updateUndo(); updateStatus(); refreshPreviews(); renderOutline();
   }
   function scheduleSave() {
     var st = $('#save-state');
     if (st) { st.textContent = 'Saving…'; st.classList.remove('err'); }
+    S.journalSafe=SP.store.journal(S.page);
     clearTimeout(S.saveTimer);
     S.saveTimer = setTimeout(saveNow, 450);
   }
+  var lastCheckpoint = 0, saving = Promise.resolve(true);
   function saveNow() {
     clearTimeout(S.saveTimer);
-    if (!S.page) return;
-    var ok = SP.store.put(S.page);
-    var st = $('#save-state');
-    if (st) { st.textContent = ok ? 'Saved ' + new Date().toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' }) : 'Not saved: storage full'; st.classList.toggle('err', !ok); }
-    if (!ok) toast('Browser storage is full. Use smaller photos or delete old pages.');
+    if (!S.page) return saving;
+    var p = SP.clone(S.page), checkpoint = Date.now() - lastCheckpoint > 15000;
+    if(checkpoint) lastCheckpoint = Date.now();
+    saving = saving.then(async function(){
+      var ok = await SP.store.put(p, checkpoint), st = $('#save-state');
+      if (st) { st.textContent = ok ? 'Saved on this device' : 'Not saved — download a backup'; st.classList.toggle('err', !ok); }
+      var banner = $('#save-error');
+      if (!ok && !banner) { banner = h('div',{id:'save-error',class:'save-error',role:'alert'},'Your latest changes are not saved. <button class="btn sm" type="button">Download backup</button>'); $('#ed').appendChild(banner); $('button',banner).onclick=function(){SP.download('nonymauz-recovery.json',JSON.stringify({app:'nonymauz',version:1,pages:SP.store.all().filter(function(x){return x.id!==S.page.id;}).concat(S.page)}),'application/json');}; }
+      if(ok && banner)banner.remove();
+      return ok;
+    });
+    return saving;
   }
   function restore(json) {
     S.page = JSON.parse(json);
     if (S.sel && !S.page.blocks.some(function (b) { return b.id === S.sel; })) S.sel = null;
     $('#page-name').value = S.page.name;
-    renderCanvas(); renderInspector(); scheduleSave(); updateUndo(); updateStatus();
+    renderCanvas(); renderInspector(); renderOutline(); scheduleSave(); updateUndo(); updateStatus();
   }
   function undo() { if (!S.hist.length) return; S.fut.push(JSON.stringify(S.page)); S.lastKey = null; restore(S.hist.pop()); }
   function redo() { if (!S.fut.length) return; S.hist.push(JSON.stringify(S.page)); S.lastKey = null; restore(S.fut.pop()); }
@@ -357,18 +366,22 @@
     if (u) u.disabled = !S.hist.length;
     if (r) r.disabled = !S.fut.length;
   }
-  window.addEventListener('beforeunload', function () { if (S.page) saveNow(); });
+  window.addEventListener('beforeunload',function(e){if(S.page && S.journalSafe===false){e.preventDefault();e.returnValue='';}});
+  document.addEventListener('visibilitychange', function () { if(document.hidden && S.page) saveNow(); });
+  window.addEventListener('pagehide', function(){if(S.page)saveNow();});
 
   /* ---------- library (left) ---------- */
   function renderLibrary() {
     var lib = $('#lib');
-    lib.innerHTML = '<div class="panel-head"><h2>Sections</h2><p>Drag onto the page, or tap to add.</p></div>' +
+    lib.innerHTML = '<div class="library-tabs"><button type="button" data-lib-tab="outline" class="on">Your page</button><button type="button" data-lib-tab="add">Add section</button></div><div id="section-outline"></div><div id="section-library" hidden><div class="panel-head"><h2>Add a section</h2><p>Drag onto the page, or tap to add.</p></div>' +
       SP.libraryGroups.map(function (g) {
         return '<div class="lib-group"><h3>' + esc(g.label) + '</h3><div class="lib-items">' + g.items.map(function (type) {
           var d = SP.blocks[type];
           return '<button type="button" class="lib-item" draggable="true" data-type="' + type + '" title="' + esc(d.hint) + '"><span class="tile">' + icon(d.icon) + '</span><span class="lib-l">' + esc(d.label) + '</span>' + icon('grip', 'grip') + '</button>';
         }).join('') + '</div></div>';
-      }).join('');
+      }).join('') + '</div>';
+    $$('[data-lib-tab]',lib).forEach(function(b){b.onclick=function(){var outline=b.dataset.libTab==='outline';$('#section-outline').hidden=!outline;$('#section-library').hidden=outline;$$('[data-lib-tab]',lib).forEach(function(x){x.classList.toggle('on',x===b);});};});
+    renderOutline();
     $$('.lib-item', lib).forEach(function (b) {
       var type = b.getAttribute('data-type');
       b.addEventListener('click', function () {
@@ -379,6 +392,13 @@
       b.addEventListener('dragstart', function (e) { drag = { type: type }; e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/plain', type); $('#ed').classList.add('dragging'); });
       b.addEventListener('dragend', endDrag);
     });
+  }
+  function renderOutline() {
+    var list=$('#section-outline');if(!list||!S.page)return;
+    list.innerHTML='<p class="outline-caption">'+S.page.blocks.length+' sections · select to edit</p><div class="outline-list">'+S.page.blocks.map(function(b,i){var title=b.props.headline||b.props.heading||b.props.title||SP.blocks[b.type].label;return '<div class="outline-row '+(b.id===S.sel?'on ':'')+(b.hidden?'is-hidden':'')+'"><button class="outline-select" type="button" data-select="'+b.id+'"><span class="outline-number">'+String(i+1).padStart(2,'0')+'</span><span><b>'+esc(SP.blocks[b.type].label)+'</b><small>'+esc(String(title).replace(/\*\*/g,''))+'</small></span></button><button type="button" class="icon-btn" data-toggle="'+b.id+'" aria-label="'+(b.hidden?'Show':'Hide')+' '+esc(SP.blocks[b.type].label)+'" aria-pressed="'+!!b.hidden+'">'+icon(b.hidden?'plus':'eye')+'</button></div>';}).join('')+'</div><button type="button" class="btn outline-add">'+icon('plus')+'Add a section</button>';
+    $$('[data-select]',list).forEach(function(b){b.onclick=function(){select(b.dataset.select);scrollToBlock(b.dataset.select);if(narrow())setDrawer('insp');};});
+    $$('[data-toggle]',list).forEach(function(b){b.onclick=function(){mutate(null,function(){var target=S.page.blocks.find(function(x){return x.id===b.dataset.toggle;});target.hidden=!target.hidden;});};});
+    $('.outline-add',list).onclick=function(){$('[data-lib-tab="add"]').click();};
   }
   function addBlock(type, idx) {
     var b = SP.makeBlock(type);
@@ -402,7 +422,7 @@
     var ctx = { editor: true, lang: s.lang, settings: s, look: p.theme.look };
     var html = p.blocks.map(function (b, i) {
       var d = SP.blocks[b.type];
-      return '<div class="ed-blk' + (b.id === S.sel ? ' sel' : '') + '" data-id="' + b.id + '">' +
+      return '<div class="ed-blk' + (b.id === S.sel ? ' sel' : '') + (b.hidden ? ' is-hidden' : '') + '" data-id="' + b.id + '">' +
         '<div class="ed-bar"><span class="ed-grip" draggable="true" title="Drag to move" aria-hidden="true">' + icon('grip') + '</span>' +
         '<span class="ed-bname">' + esc(d.label) + '</span>' +
         '<button type="button" data-a="up" title="Move up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>' + icon('up') + '</button>' +
@@ -493,7 +513,7 @@
   function select(id) {
     S.sel = id;
     $$('#page-root .ed-blk').forEach(function (x) { x.classList.toggle('sel', x.getAttribute('data-id') === id); });
-    renderInspector();
+    renderInspector(); renderOutline();
   }
 
   function blockAction(id, act) {
@@ -533,6 +553,10 @@
       insp.appendChild(body);
       if (b.type === 'order') { var ws = h('div', { class: 'form-sec', style: 'margin-top:24px' }); ws.appendChild(orderPreview()); insp.appendChild(ws); }
       var foot = h('div', { class: 'panel-foot' });
+      var meta=h('div',{class:'form section-meta'});
+      meta.appendChild(fieldEl(SP.F.text('anchor','Section link name',{hint:'Use a short name, e.g. benefits. Buttons can link to #benefits.'}),b,'block.'+b.id+'.anchor',b));
+      meta.appendChild(fieldEl(SP.F.sel('spacing','Section spacing',[['','Follow page'],['compact','Compact'],['comfortable','Comfortable'],['generous','Generous']]),b,'block.'+b.id+'.spacing',b));
+      insp.appendChild(meta);
       foot.appendChild(h('button', { type: 'button', class: 'btn sm', onclick: function () { blockAction(b.id, 'dup'); } }, icon('copy') + 'Duplicate section'));
       foot.appendChild(h('button', { type: 'button', class: 'btn sm danger', onclick: function () { blockAction(b.id, 'del'); } }, icon('trash') + 'Delete section'));
       insp.appendChild(foot);
@@ -563,7 +587,7 @@
         if (f.type === 'number') { inp.min = '0'; inp.step = 'any'; inp.inputMode = 'decimal'; }
         inp.value = obj[f.key] == null ? '' : obj[f.key];
         inp.addEventListener('input', function () {
-          set(f.type === 'number' ? (parseFloat(inp.value) || 0) : inp.value);
+          set(f.type === 'number' ? SP.nonnegative(inp.value) : f.key==='anchor' ? inp.value.replace(/[^a-zA-Z0-9_-]/g,'').replace(/^[^a-zA-Z]+/,'').slice(0,60) : inp.value);
           if (f.titleOf) f.titleOf(inp.value);
         });
         wrap.appendChild(inp); hint(); break;
@@ -622,6 +646,9 @@
           }
           box.appendChild(file);
         };
+        var reuse=h('button',{type:'button',class:'btn sm'},'Choose an uploaded photo');
+        reuse.onclick=function(){var sources=SP.store.images();var dialog=SP.dialog('Your photos',sources.length?'<div class="asset-grid">'+sources.map(function(src,i){return '<button type="button" data-asset="'+i+'" aria-label="Choose photo '+(i+1)+'"><img src="'+esc(src)+'" alt="Uploaded photo '+(i+1)+'"></button>';}).join('')+'</div>':'<p>Upload a photo first. It will be available here for every page.</p>');dialog.root.querySelectorAll('[data-asset]').forEach(function(button){button.onclick=function(){set(sources[+button.dataset.asset]);draw();dialog.close();};});};
+        wrap.appendChild(reuse);
         var take = function (fl) {
           if (!fl) return;
           box.classList.add('busy');
@@ -636,7 +663,7 @@
         var url = h('details', { class: 'imgurl' }, '<summary>Use a web link instead</summary>');
         var ui = h('input', { type: 'url', placeholder: 'https://…', 'aria-label': 'Photo web link', id: id + '-url' });
         if (/^https?:/.test(obj[f.key] || '')) ui.value = obj[f.key];
-        ui.addEventListener('change', function () { set(ui.value.trim()); draw(); });
+        ui.addEventListener('change', function () { var value=ui.value.trim();if(value&&!SP.safeImage(value))return toast('Use an https:// or http:// image link.');set(value); draw(); });
         url.appendChild(ui);
         wrap.appendChild(url);
         hint(); break;
@@ -680,7 +707,7 @@
         add.addEventListener('click', function () {
           mutate(null, function () { arr.push(f.newItem ? f.newItem() : {}); }, { insp: true });
           openItems[key + '.' + (arr.length - 1)] = true;
-          renderInspector();
+          renderInspector(); renderOutline();
           var last = $$('#insp .list-item');
           if (last.length) last[last.length - 1].scrollIntoView({ block: 'nearest' });
         });
@@ -703,7 +730,7 @@
     var form = h('div', { class: 'form' });
 
     /* colour presets */
-    var sec = function (title) { var d = h('div', { class: 'form-sec' }); d.appendChild(h('h3', {}, esc(title))); form.appendChild(d); return d; };
+    var sec = function (title) { var group=h('details',{class:'settings-group'});group.open = !['Sharing & ads','Helpful extras','Brand kit','Letters & shape'].includes(title);group.appendChild(h('summary',{},esc(title)));var d=h('div',{class:'form-sec'});group.appendChild(d);form.appendChild(group);return d; };
     var biz = sec('Orders');
     var lk = sec('Layout style');
     var looks = h('div', { class: 'fontpick lookpick', role: 'radiogroup', 'aria-label': 'Layout style' });
@@ -721,7 +748,7 @@
       var b = h('button', { type: 'button', class: 'swatch' + (on ? ' on' : ''), role: 'radio', 'aria-checked': on ? 'true' : 'false', title: th.label },
         '<span class="sw" style="background:' + th.bg + '"><i style="background:' + th.primary + '"></i><i style="background:' + th.accent + '"></i></span>' + esc(th.label));
       b.addEventListener('click', function () {
-        mutate(null, function () { Object.assign(t, { preset: k, primary: th.primary, accent: th.accent, bg: th.bg, text: th.text }); }, { insp: true });
+        mutate(null, function () { Object.assign(t, { preset: k, primary: th.primary, accent: th.accent, bg: th.bg, text: th.text, alt: th.alt || '' }); }, { insp: true });
       });
       sw.appendChild(b);
     });
@@ -750,10 +777,18 @@
 
     biz.appendChild(fieldEl(F.text('businessName', 'Business name', { hint: 'Shown in the WhatsApp order message.' }), s, 'settings.businessName', s));
     biz.appendChild(fieldEl(F.text('whatsapp', 'WhatsApp number for orders', { hint: 'E.g. 012-345 6789. Orders from your page go to this number.' }), s, 'settings.whatsapp', s));
+    var test=h('button',{type:'button',class:'btn sm'},icon('chat')+'Test WhatsApp');
+    test.onclick=function(){if(!SP.validWa(s.whatsapp))return toast('Enter a valid WhatsApp number first.');window.open('https://wa.me/'+SP.waNumber(s.whatsapp),'_blank','noopener');};biz.appendChild(test);
     biz.appendChild(orderPreview());
     biz.appendChild(fieldEl(F.seg('lang', 'Page language', [['ms', 'Bahasa Melayu'], ['en', 'English']], { hint: 'For buttons and labels like "Jumlah" or "Total".' }), s, 'settings.lang', s));
 
+    var versions=sec('History & activity');versions.appendChild(h('button',{type:'button',class:'btn sm',onclick:function(){$('#btn-history').click();}},'Version history'));versions.appendChild(h('button',{type:'button',class:'btn sm',onclick:function(){SP.openInsights(S.page);}},'Page activity'));
+    var brand=sec('Brand kit');
+    brand.appendChild(h('button',{type:'button',class:'btn sm',onclick:function(){try{localStorage.setItem('nonymauz.brand',JSON.stringify({theme:t,businessName:s.businessName,whatsapp:s.whatsapp}));toast('Brand kit saved on this device');}catch(e){toast('Could not save the brand kit');}}},'Save current brand'));
+    brand.appendChild(h('button',{type:'button',class:'btn sm',onclick:function(){try{var kit=JSON.parse(localStorage.getItem('nonymauz.brand')||'null');if(!kit)return toast('Save a brand kit first');mutate(null,function(){S.page.theme=SP.normalizePage({theme:kit.theme,blocks:[]}).theme;Object.assign(s,{businessName:kit.businessName,whatsapp:kit.whatsapp});},{insp:true});}catch(e){toast('Could not load the brand kit');}}},'Apply saved brand'));
     var extra = sec('Helpful extras');
+    extra.appendChild(fieldEl(F.seg('spacing','Page spacing',[['compact','Compact'],['comfortable','Comfortable']]),s,'settings.spacing',s));
+    extra.appendChild(fieldEl(F.toggle('captureOrders','Save order enquiries online',{hint:'Published pages show a notice before sending customer details. Requires cloud publishing.'}),s,'settings.captureOrders',s));
     extra.appendChild(fieldEl(F.toggle('waFloat', 'Floating WhatsApp chat button'), s, 'settings.waFloat', s));
     extra.appendChild(fieldEl(F.toggle('sticky', 'Sticky order button at the bottom', { rerender: true, hint: 'Stays on screen while visitors scroll. Great on phones.' }), s, 'settings.sticky', s));
     if (s.sticky) extra.appendChild(fieldEl(F.text('stickyText', 'Sticky button text'), s, 'settings.stickyText', s));
@@ -781,9 +816,9 @@
     return lines.join('\n');
   }
   function orderPreview() {
-    var box = h('div', { class: 'wa-prev', 'data-wa-prev': '' });
+    var disclosure=h('details',{class:'message-preview'});disclosure.appendChild(h('summary',{},'Preview WhatsApp message'));var box = h('div', { class: 'wa-prev', 'data-wa-prev': '' });disclosure.appendChild(box);
     fillPreview(box);
-    return box;
+    return disclosure;
   }
   function fillPreview(box) {
     var p = S.page, msg = orderMessage(p), wa = SP.waNumber(p.settings.whatsapp);
@@ -812,8 +847,8 @@
 
   /* ================= PREVIEW ================= */
   /* Preview shows the exact file that Publish downloads, so what you see is what buyers get. */
-  function openPreview() {
-    saveNow();
+  async function openPreview() {
+    await saveNow();
     var dev = S.device;
     var ov = h('div', { class: 'overlay preview', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Preview' });
     ov.innerHTML = '<div class="ov-bar"><h2>Preview</h2><span class="ov-note">Exactly what buyers see. The order form and buttons work.</span>' +
@@ -839,34 +874,9 @@
   }
 
   /* ================= PUBLISH ================= */
-  function openPublish() {
-    saveNow();
-    var p = S.page, s = p.settings;
-    var warn = [];
-    if (!SP.waNumber(s.whatsapp) && p.blocks.some(function (b) { return b.type === 'order'; })) warn.push('Add your <b>WhatsApp number</b> in Page settings, or orders will have nowhere to go.');
-    if (p.blocks.some(function (b) { return b.type === 'hero' && !b.props.image; })) warn.push('Your headline has no photo yet. Pages with a real product photo sell better.');
-    var file = SP.slug(p.name) + '.html';
-    var ov = h('div', { class: 'overlay modal-wrap', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'pub-title' });
-    ov.innerHTML = '<div class="modal">' +
-      '<div class="modal-head"><h2 id="pub-title">Put your page online</h2><button type="button" class="icon-btn" data-close aria-label="Close">' + icon('close') + '</button></div>' +
-      (warn.length ? '<div class="notice" role="note">' + warn.map(function (w) { return '<p>' + w + '</p>'; }).join('') + '</div>' : '') +
-      '<ol class="pub-steps">' +
-      '<li><b>Download your page.</b> It is one file, <code>' + esc(file) + '</code>, with everything inside.<div class="pub-acts"><button type="button" class="btn primary" id="pub-dl">' + icon('download') + 'Download page</button><button type="button" class="btn" id="pub-copy">' + icon('copy') + 'Copy HTML code</button></div></li>' +
-      '<li><b>Upload it to free hosting.</b> The easiest: open <span class="url">app.netlify.com/drop</span> and drag the file in. You get a link in seconds.</li>' +
-      '<li><b>Share the link</b> in your WhatsApp status, Facebook, TikTok bio and ads.</li></ol>' +
-      '<p class="fine">Already have a website or cPanel? Upload the file there and rename it to <code>index.html</code>. Every time you change your page, download and upload it again.</p>' +
-      '</div>';
-    document.body.appendChild(ov);
-    var close = function () { ov.remove(); };
-    $('[data-close]', ov).addEventListener('click', close);
-    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
-    ov.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-    $('#pub-dl', ov).addEventListener('click', function () {
-      var ok = SP.download(file, SP.exportHTML(S.page));
-      toast(ok ? 'Downloaded ' + file : 'Download is blocked here. Use Copy HTML code instead.');
-    });
-    $('#pub-copy', ov).addEventListener('click', function () { copyText(SP.exportHTML(S.page), 'HTML copied. Paste it into a file called index.html.'); });
-    $('#pub-dl', ov).focus();
+  async function openPublish() {
+    if(!await saveNow())return;
+    SP.openPublish(S.page,function(){scheduleSave();updateStatus();});
   }
 
   /* ---------- keyboard shortcuts ---------- */
@@ -880,5 +890,5 @@
     else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing && S.sel) { e.preventDefault(); blockAction(S.sel, 'del'); }
   });
 
-  route();
+  SP.store.ready.then(route);
 })(window.SP);

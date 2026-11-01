@@ -27,6 +27,15 @@ window.SP = window.SP || {};
     return d;
   };
 
+  /* Only explicit web/contact protocols and local section anchors are navigable. */
+  SP.safeLink = function (value, fallback) {
+    var v = String(value || '').trim();
+    return /^(?:https?:\/\/[^\s<>]+|mailto:[^\s<>]+|tel:\+?[0-9() -]+|#[a-zA-Z][\w-]*)$/i.test(v) ? v : (fallback || '#order');
+  };
+  SP.validWa = function (value) { var d = SP.waNumber(value); return /^[1-9]\d{7,14}$/.test(d) && (!d.startsWith('60') || /^60(?:1\d{8,9}|[3-9]\d{7,8})$/.test(d)); };
+  SP.safeImage = function (value) { var v = String(value || ''); return /^(?:https?:\/\/[^\s<>]+|data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+)$/i.test(v) ? v : ''; };
+  SP.nonnegative = function (v) { var n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.min(10000000, n)) : 0; };
+
   function hexToRgb(hex) {
     var h = String(hex || '').replace('#', '');
     if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
@@ -111,7 +120,7 @@ window.SP = window.SP || {};
 
   SP.pageClass = function (page, extra) {
     var s = page.settings || {}, look = SP.looks[page.theme.look] ? page.theme.look : 'classic';
-    return 'sp-page look-' + look + (s.sticky && s.stickyText ? ' has-sticky' : '') + (extra ? ' ' + extra : '');
+    return 'sp-page density-' + (s.spacing === 'compact' ? 'compact' : 'comfortable') + ' look-' + look + (s.sticky && s.stickyText ? ' has-sticky' : '') + (extra ? ' ' + extra : '');
   };
 
   /* Words that appear on the customer's page. */

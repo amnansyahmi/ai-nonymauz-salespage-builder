@@ -6,6 +6,10 @@
 
   /* ---------- tiny icon set (editor + page) ---------- */
   var I = {
+    right: '<path d="M4 12h16M13 5l7 7-7 7"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18"/>',
+    chart: '<path d="M4 3v17h17M9 16v-5M14 16V6M19 16V9"/>',
+    chat: '<path d="M4 4h16v13H9l-5 4V4zM8 8h8M8 12h5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
     down: '<path d="M12 5v14M19 12l-7 7-7-7"/>',
@@ -54,13 +58,13 @@
 
   /* ---------- render helpers ---------- */
   function img(src, c, cls, alt) {
-    if (src) return '<img class="' + cls + '" src="' + esc(src) + '" alt="' + esc(alt || '') + '" loading="lazy">';
+    if (src) return '<img class="' + cls + '" src="' + esc(SP.safeImage(src)) + '" alt="' + esc(alt || '') + '" loading="' + (cls === 'sp-hero-img' ? 'eager' : 'lazy') + '" decoding="async">';
     if (c.editor) return '<div class="' + cls + ' sp-ph">' + SP.icon('image') + '<span>Add a photo</span></div>';
     return '';
   }
   function btn(text, link, extra) {
     if (!text) return '';
-    return '<a class="sp-btn ' + (extra || '') + '" href="' + esc(link || '#order') + '">' + esc(text) + '</a>';
+    return '<a class="sp-btn ' + (extra || '') + '" href="' + esc(SP.safeLink(link)) + '">' + esc(text) + '</a>';
   }
   function split(h, body) {
     return '<div class="sp-split"><div class="sp-split-h">' + h + '</div><div class="sp-split-b">' + body + '</div></div>';
@@ -131,22 +135,26 @@
     hero: {
       label: 'Headline', icon: 'hero', hint: 'Big opening title',
       defaults: function () {
-        return { eyebrow: 'Promosi minggu ini', headline: 'Tulis tajuk utama yang **menarik** di sini', sub: 'Terangkan dalam satu ayat apa yang pelanggan dapat.', image: '', btnText: 'Saya nak order', btnLink: '#order', align: 'left', bg: 'default' };
+        return { artwork: 'auto', arrangement: 'split', imageFit: 'cover', focusX: 50, focusY: 50, eyebrow: 'Promosi minggu ini', headline: 'Tulis tajuk utama yang **menarik** di sini', sub: 'Terangkan dalam satu ayat apa yang pelanggan dapat.', image: '', btnText: 'Saya nak order', btnLink: '#order', align: 'left', bg: 'default' };
       },
       fields: [
         F.text('eyebrow', 'Short fact under the button', { hint: 'Optional. A reason to trust you, e.g. "Resepi keluarga sejak 1998".' }),
         F.area('headline', 'Main title', { hint: BOLD_HINT, rows: 3 }),
         F.area('sub', 'Supporting sentence', { rows: 3 }),
         F.img('image', 'Product photo'),
+        F.sel('arrangement', 'Composition', [['split','Side by side'],['image-first','Photo first'],['stacked','Stacked']]),
+        F.sel('artwork', 'When there is no photo', [['auto','Template illustration'],['none','Text only'],['jar','Product jar'],['unit','Aircond']]),
+        F.sel('imageFit', 'Photo crop', [['cover','Fill frame'],['contain','Show whole photo']]),
+        F.num('focusX', 'Photo focus: horizontal (%)', {half:true}), F.num('focusY', 'Photo focus: vertical (%)', {half:true}),
         F.text('btnText', 'Button text', { hint: 'Leave empty to hide the button.' }),
         F.text('btnLink', 'Button goes to', { hint: LINK_HINT }),
         F.seg('align', 'Alignment', [['left', 'Left'], ['center', 'Centre']]),
         BG
       ],
       render: function (p, c) {
-        var pic = c.look === 'stage' ? '' : !p.image && c.look === 'label' ? jarSVG(c) : !p.image && c.look === 'unit' ? unitSVG() : img(p.image, c, 'sp-hero-img', p.headline);
+        var pic = c.look === 'stage' || (!p.image && p.artwork === 'none') ? '' : !p.image && p.artwork !== 'none' && (p.artwork === 'jar' || (p.artwork === 'auto' && c.look === 'label')) ? jarSVG(c) : !p.image && p.artwork !== 'none' && (p.artwork === 'unit' || (p.artwork === 'auto' && c.look === 'unit')) ? unitSVG() : img(p.image, c, 'sp-hero-img', p.headline);
         var brand = c.look === 'label' && c.settings && c.settings.businessName ? '<p class="sp-label-brand">' + esc(c.settings.businessName) + '</p>' : '';
-        return '<div class="sp-hero sp-al-' + esc(p.align) + (pic ? ' has-pic' : '') + '"><div class="sp-hero-copy">' + brand +
+        return '<div style="--image-fit:' + (p.imageFit === 'contain' ? 'contain' : 'cover') + '" class="sp-hero arrangement-' + esc(p.arrangement) + ' sp-al-' + esc(p.align) + (pic ? ' has-pic' : '') + '"><div class="sp-hero-copy">' + brand +
           (c.editor || c.thumb ? '<h2 class="sp-h1">' + rich(p.headline) + '</h2>' : '<h1 class="sp-h1">' + rich(p.headline) + '</h1>') +
           (p.sub ? '<p class="sp-lead">' + rich(p.sub) + '</p>' : '') +
           btn(p.btnText, p.btnLink) +
@@ -231,7 +239,7 @@
           ],
           shipLabel: 'Penghantaran',
           shipping: [{ label: 'Semenanjung Malaysia', fee: 8 }, { label: 'Sabah & Sarawak', fee: 15 }],
-          freeShipMin: 0, askAddress: true, askNote: true,
+          freeShipMin: 0, askAddress: true, askNote: true, askSchedule: false, variants: '',
           btnText: 'Order melalui WhatsApp',
           payNote: 'Selepas tekan butang, WhatsApp akan dibuka dengan maklumat tempahan anda. Kami akan sahkan dan beri maklumat bayaran.',
           bg: 'soft'
@@ -245,9 +253,11 @@
           F.text('badge', 'Label (optional)', { hint: 'E.g. "Paling laris" or "Stok terhad".' }), F.img('image', 'Photo')
         ], { itemLabel: 'Product', addLabel: 'Add product', titleKey: 'name', newItem: function () { return { name: 'Produk baru', desc: '', price: 10, oldPrice: 0, image: '', badge: '' }; } }),
         F.text('shipLabel', 'Delivery section title', { hint: 'For services you could call it "Kawasan" instead.' }),
-        F.list('shipping', 'Delivery options', [F.text('label', 'Option'), F.num('fee', 'Fee (RM)')], { itemLabel: 'Option', addLabel: 'Add delivery option', titleKey: 'label', hint: 'Remove all options if you do not deliver.', newItem: function () { return { label: 'Ambil sendiri', fee: 0 }; } }),
+        F.list('shipping', 'Delivery options', [F.text('label', 'Option'), F.num('fee', 'Fee (RM)'), F.toggle('pickup', 'Pickup: no address needed')], { itemLabel: 'Option', addLabel: 'Add delivery option', titleKey: 'label', hint: 'Remove all options if you do not deliver.', newItem: function () { return { label: 'Ambil sendiri', fee: 0 }; } }),
         F.num('freeShipMin', 'Free delivery when order reaches (RM)', { hint: '0 means no free delivery.' }),
-        F.toggle('askAddress', 'Ask for delivery address'), F.toggle('askNote', 'Let customer add a note'),
+        F.toggle('askAddress', 'Ask for delivery address'),
+        F.toggle('askSchedule', 'Ask for a preferred appointment'),
+        F.text('variants', 'Variant choices (comma separated)', {hint:'E.g. Original, Extra spicy. Leave empty if not needed.'}), F.toggle('askNote', 'Let customer add a note'),
         F.text('btnText', 'Button text'),
         F.area('payNote', 'Note under the button', { rows: 3 }),
         BG
@@ -263,17 +273,18 @@
             '<div class="sp-item-body"><div class="sp-item-name">' + esc(it.name) + (it.badge ? ' <span class="sp-badge">' + esc(it.badge) + '</span>' : '') + '</div>' +
             (it.desc ? '<div class="sp-item-desc">' + esc(it.desc) + '</div>' : '') +
             '<div class="sp-price"><b>' + SP.money(it.price, cur) + '</b>' + old + '</div></div>' +
-            '<div class="sp-qty"><button type="button" data-d="-1" aria-label="Kurang">−</button><input type="number" min="0" max="999" inputmode="numeric" value="' + (i === 0 ? 1 : 0) + '" aria-label="' + esc(it.name) + '"><button type="button" data-d="1" aria-label="Tambah">+</button></div></div>';
+            '<div class="sp-qty"><button type="button" data-d="-1" aria-label="' + (c.lang === 'en' ? 'Decrease quantity' : 'Kurang') + '">−</button><input type="number" min="0" max="999" inputmode="numeric" value="' + (i === 0 ? 1 : 0) + '" aria-label="' + esc(it.name) + '"><button type="button" data-d="1" aria-label="' + (c.lang === 'en' ? 'Increase quantity' : 'Tambah') + '">+</button></div></div>';
         }).join('');
         var ship = (p.shipping || []);
         var shipHtml = ship.length ? '<fieldset class="sp-ship" data-ui><legend>' + esc(p.shipLabel || 'Penghantaran') + '</legend>' + ship.map(function (s, i) {
-          return '<label class="sp-radio"><input type="radio" name="ship-' + esc(bid) + '" value="' + i + '"' + (i === 0 ? ' checked' : '') + '><span>' + esc(s.label) + '</span><b>' + (Number(s.fee) ? SP.money(s.fee, cur) : L.free) + '</b></label>';
+          return '<label class="sp-radio"><input type="radio" name="ship-' + esc(bid) + '" value="' + i + '"' + (i === 0 ? ' checked' : '') + '><span>' + esc(s.label) + '</span><b>' + (SP.nonnegative(s.fee) ? SP.money(SP.nonnegative(s.fee), cur) : L.free) + '</b></label>';
         }).join('') + (Number(p.freeShipMin) > 0 ? '<p class="sp-small">' + L.freeShipFrom + ' ' + SP.money(p.freeShipMin, cur) + '</p>' : '') + '</fieldset>' : '';
         var cfg = {
-          items: items.map(function (it) { return { name: it.name, price: Number(it.price) || 0 }; }),
-          shipping: ship.map(function (s) { return { label: s.label, fee: Number(s.fee) || 0 }; }),
+          formId: bid, capture: !!c.captureOrders,
+          items: items.map(function (it) { return { name: it.name, price: SP.nonnegative(it.price) }; }),
+          shipping: ship.map(function (s) { return { label: s.label, fee: SP.nonnegative(s.fee), pickup: !!s.pickup }; }),
           shipLabel: p.shipLabel || 'Penghantaran',
-          freeShipMin: Number(p.freeShipMin) || 0, askAddress: !!p.askAddress,
+          freeShipMin: Number(p.freeShipMin) || 0, askAddress: !!p.askAddress, askSchedule: !!p.askSchedule,
           wa: SP.waNumber(c.settings && c.settings.whatsapp), page: (c.settings && c.settings.businessName) || '',
           currency: cur, labels: L, demo: !!(c.editor || c.preview)
         };
@@ -281,16 +292,19 @@
           var id = 'f-' + bid + '-' + name;
           return '<label class="sp-field" for="' + id + '"><span>' + label + '</span>' +
             (type === 'textarea' ? '<textarea id="' + id + '" name="' + name + '" rows="3"' + (req ? ' required' : '') + '></textarea>' :
-              '<input id="' + id + '" name="' + name + '" type="' + type + '"' + (type === 'tel' ? ' inputmode="tel" autocomplete="tel"' : ' autocomplete="name"') + (req ? ' required' : '') + '>') + '</label>';
+              '<input id="' + id + '" name="' + name + '" type="' + type + '"' + (type === 'tel' ? ' inputmode="tel" autocomplete="tel"' : (name === 'name' ? ' autocomplete="name"' : '')) + (req ? ' required' : '') + '>') + '</label>';
         };
         return split(head(p.heading, p.sub),
           '<form class="sp-order" novalidate data-cfg="' + esc(JSON.stringify(cfg)) + '">' +
           '<div class="sp-items" data-ui>' + rows + '</div>' + shipHtml +
           '<fieldset class="sp-cust"><legend>' + L.customer + '</legend>' + f('name', L.name, 'text', true) + f('phone', L.phone, 'tel', true) +
+          (p.variants ? '<label class="sp-field"><span>' + (c.lang === 'en' ? 'Variant' : 'Pilihan') + '</span><select name="variant">' + String(p.variants).split(',').slice(0,30).map(function(v){return '<option>' + esc(v.trim()) + '</option>';}).join('') + '</select></label>' : '') +
+          (p.askSchedule ? f('date', c.lang === 'en' ? 'Preferred date' : 'Tarikh pilihan', 'date', true) + f('time', c.lang === 'en' ? 'Preferred time' : 'Masa pilihan', 'time', true) : '') +
           (p.askAddress ? f('address', L.address, 'textarea', true) : '') + (p.askNote ? f('note', L.note, 'text') : '') + '</fieldset>' +
           '<div class="sp-sum" data-ui><div><span>' + L.subtotal + '</span><b data-o="sub">RM0</b></div>' +
           (ship.length ? '<div><span>' + esc(p.shipLabel || 'Penghantaran') + '</span><b data-o="ship">RM0</b></div>' : '') +
           '<div class="sp-sum-total"><span>' + L.total + '</span><b data-o="total">RM0</b></div></div>' +
+          (c.captureOrders ? '<label class="sp-capture-note sp-consent"><input name="consent" type="checkbox"><span>' + (c.lang === 'en' ? 'Also save my details with this shop online for order follow-up (optional). Enquiries are kept for up to 30 days.' : 'Simpan juga maklumat saya dengan kedai ini untuk urusan tempahan (pilihan). Maklumat disimpan sehingga 30 hari.') + '</span></label>' : '') +
           '<p class="sp-err" role="alert" hidden></p>' +
           '<button type="submit" class="sp-btn sp-btn-wa">' + SP.svgChat + '<span>' + esc(p.btnText || 'Order') + '</span></button>' +
           (p.payNote ? '<p class="sp-small sp-center">' + rich(p.payNote) + '</p>' : '') +
@@ -345,9 +359,9 @@
         { itemLabel: 'Review', addLabel: 'Add review', titleKey: 'name', newItem: function () { return { name: 'Nama', info: '', quote: 'Testimoni baru', image: '', stars: 5 }; } }), BG],
       render: function (p) {
         var cards = (p.items || []).map(function (it) {
-          var n = Number(it.stars) || 0, stars = '';
+          var n = Math.max(0, Math.min(5, Number(it.stars) || 0)), stars = '';
           for (var i = 0; i < n; i++) stars += svgStar;
-          var av = it.image ? '<img class="sp-av" src="' + esc(it.image) + '" alt="">' : '';
+          var av = it.image ? '<img class="sp-av" src="' + esc(SP.safeImage(it.image)) + '" alt="">' : '';
           return '<figure class="sp-review"><blockquote>' + rich(it.quote) + '</blockquote><figcaption>' + av +
             '<span><b>' + esc(it.name) + '</b>' + (it.info ? ', ' + esc(it.info) : '') + '</span>' +
             (stars ? '<span class="sp-stars" role="img" aria-label="' + n + ' / 5">' + stars + '</span>' : '') + '</figcaption></figure>';
@@ -401,7 +415,7 @@
       fields: [F.text('heading', 'Heading', { hint: BOLD_HINT }), F.area('text', 'Text', { rows: 3 }), F.text('btnText', 'Button text'), F.text('btnLink', 'Button goes to', { hint: LINK_HINT }), BG],
       render: function (p, c) {
         if ((c.look === 'label' || c.look === 'chapters') && p.btnText && p.btnText.length <= 9) {
-          return '<a class="sp-band" href="' + esc(p.btnLink || '#order') + '"><span class="sp-band-s">' + (p.heading ? rich(p.heading) + (p.text ? ' ' : '') : '') + (p.text ? rich(p.text) : '') + '</span>' +
+          return '<a class="sp-band" href="' + esc(SP.safeLink(p.btnLink)) + '"><span class="sp-band-s">' + (p.heading ? rich(p.heading) + (p.text ? ' ' : '') : '') + (p.text ? rich(p.text) : '') + '</span>' +
             '<svg class="sp-band-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M8 6h10v10" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>' +
             '<span class="sp-band-w" style="--n:' + p.btnText.length + '">' + esc(p.btnText) + '</span></a>';
         }
@@ -437,11 +451,22 @@
 
   /* Fill any missing props with defaults (keeps old saved pages working). */
   SP.normalizeBlock = function (b) {
+    if(!b || typeof b !== 'object' || !Object.prototype.hasOwnProperty.call(SP.blocks,b.type))return null;
     var def = SP.blocks[b.type];
-    if (!def) return null;
     var d = def.defaults();
-    b.id = b.id || SP.uid();
+    b.id = /^[a-zA-Z0-9_-]{1,80}$/.test(b.id || '') ? b.id : SP.uid();
     b.props = Object.assign(d, b.props || {});
+    Object.keys(d).forEach(function (key) {
+      if (Array.isArray(d[key])) b.props[key] = (Array.isArray(b.props[key]) ? b.props[key] : d[key]).filter(function (x) { return x && typeof x === 'object' && !Array.isArray(x); }).slice(0, 100);
+      else if (typeof d[key] === 'string') b.props[key] = String(b.props[key] == null ? '' : b.props[key]).slice(0, key === 'image' ? 4000000 : 12000);
+    });
+    ['items','shipping'].forEach(function (key) { (b.props[key] || []).forEach(function (x) { ['price','oldPrice','fee','value'].forEach(function (k) { if (k in x) x[k] = SP.nonnegative(x[k]); }); }); });
+    ['price','oldPrice','freeShipMin','minutes'].forEach(function (k) { if (k in b.props) b.props[k] = SP.nonnegative(b.props[k]); });
+    b.hidden = !!b.hidden;
+    b.anchor = /^[a-zA-Z][\w-]{0,60}$/.test(b.anchor || '') && b.anchor !== 'order' ? b.anchor : '';
+    b.spacing = ['compact','comfortable','generous'].includes(b.spacing) ? b.spacing : '';
+    b.props.focusX = Math.min(100, Math.max(0, (Number.isFinite(Number(b.props.focusX)) ? Number(b.props.focusX) : 50)));
+    b.props.focusY = Math.min(100, Math.max(0, (Number.isFinite(Number(b.props.focusY)) ? Number(b.props.focusY) : 50)));
     return b;
   };
   SP.makeBlock = function (type, props) {
@@ -450,15 +475,15 @@
 
   SP.renderSection = function (b, ctx) {
     var def = SP.blocks[b.type];
-    if (!def) return '';
+    if (!def || (b.hidden && !ctx.editor)) return '';
     var p = b.props;
     var c = Object.assign({}, ctx, { bid: b.id });
     ctx._n = (ctx._n || 0) + 1;
     var inner = def.render(p, c);
     if (!inner && !ctx.editor) return '';
-    var anchor = '';
+    var anchor = b.anchor ? ' id="' + esc(b.anchor) + '"' : '';
     if (b.type === 'order' && !ctx._orderSeen) { anchor = ' id="order"'; ctx._orderSeen = true; }
-    return '<section class="sp-sec sp-bg-' + esc(p.bg || 'default') + ' sp-b-' + b.type + ' sp-n' + ((ctx._n - 1) % 4) + '"' + anchor + '><div class="sp-wrap">' + inner + '</div></section>';
+    return '<section class="sp-sec sp-bg-' + esc(p.bg || 'default') + (b.spacing ? ' spacing-' + b.spacing : '') + ' sp-b-' + b.type + ' sp-n' + ((ctx._n - 1) % 4) + '" style="--focus-x:' + p.focusX + '%;--focus-y:' + p.focusY + '%"' + anchor + '><div class="sp-wrap">' + inner + '</div></section>';
   };
 
   SP.renderFixed = function (page, ctx) {
@@ -467,7 +492,7 @@
     var wa = s.waFloat && (num || ctx.editor) ?
       '<a class="sp-wa" href="https://wa.me/' + esc(num) + '?text=' + encodeURIComponent(L.chat) + '" target="_blank" rel="noopener" aria-label="WhatsApp">' + SP.svgChat + '</a>' : '';
     if (s.sticky && s.stickyText) {
-      return '<div class="sp-fixed has-bar"><div class="sp-sticky"><a class="sp-btn" href="' + esc(s.stickyLink || '#order') + '">' + esc(s.stickyText) + '</a>' + wa + '</div></div>';
+      return '<div class="sp-fixed has-bar"><div class="sp-sticky"><a class="sp-btn" href="' + esc(SP.safeLink(s.stickyLink)) + '">' + esc(s.stickyText) + '</a>' + wa + '</div></div>';
     }
     return wa ? '<div class="sp-fixed">' + wa + '</div>' : '';
   };
@@ -478,10 +503,10 @@
     var hp = hero ? hero.props : {}, s = page.settings || {};
     var name = String(hp.headline || s.businessName || page.name || '').replace(/\*\*/g, '');
     var fieldName = s.businessName || name;
-    var media = hp.image ? '<img src="' + esc(hp.image) + '" alt="' + esc(name) + '">' :
+    var media = hp.image ? '<img src="' + esc(SP.safeImage(hp.image)) + '" alt="' + esc(name) + '">' :
       '<div class="sp-stage-field"><span>' + esc(fieldName) + '</span>' + (ctx.editor ? '<small>Add your product photo in the Headline section</small>' : '') + '</div>';
     var bar = (hp.eyebrow || s.businessName) ? '<div class="sp-stage-bar"><span>' + esc(hp.eyebrow || '') + '</span><span>' + (hp.image ? esc(s.businessName || '') : '') + '</span></div>' : '';
-    return '<aside class="sp-stage-media"' + (hero ? ' data-stage-for="' + hero.id + '"' : '') + '>' + media + bar + '</aside>';
+    return '<aside style="--image-fit:' + (hp.imageFit === 'contain' ? 'contain' : 'cover') + ';--focus-x:' + hp.focusX + '%;--focus-y:' + hp.focusY + '%" class="sp-stage-media"' + (hero ? ' data-stage-for="' + hero.id + '"' : '') + '>' + media + bar + '</aside>';
   };
   SP.wrapStage = function (page, ctx, sections) {
     return '<div class="sp-stage">' + SP.stageMedia(page, ctx) + '<div class="sp-stage-col">' + sections + '</div></div>';

@@ -1,3 +1,10 @@
 # taste-skill working files: keep the dealt style sheet, ignore screenshots
 .taste-skill/*
 !.taste-skill/app/
+
+node_modules/
+.env*
+!.env.example
+.openai/
+.vercel/
+dist/
