@@ -18,7 +18,7 @@
       id: 'food', name: 'Food & homemade products', desc: 'Sambal, kuih, frozen food, skincare. Packages, delivery fees and WhatsApp orders.',
       build: function () {
         return page('Sambal Garing', 'kunyit', 'mesra', 'round', { businessName: 'Dapur Mak Long' }, [
-          B('hero', { eyebrow: 'Resepi keluarga sejak 1998', headline: 'Sambal garing yang **rangup sampai hujung botol**', sub: 'Makan dengan nasi panas, roti atau mi segera. Dimasak dalam kuali besar, tanpa pengawet.', btnText: 'Saya nak order', bg: 'default' }),
+          B('hero', { eyebrow: 'Resepi keluarga sejak 1998', headline: 'Sambal garing yang rangup', sub: 'Makan dengan nasi panas, roti atau mi segera. Dimasak dalam kuali besar, tanpa pengawet.', btnText: 'Saya nak order', bg: 'default' }),
           B('countdown', { heading: 'Harga promo tamat dalam', mode: 'evergreen', minutes: 2880, bg: 'dark' }),
           B('benefits', { heading: 'Pernah rasa macam ni?', style: 'cross', items: [{ text: 'Balik kerja penat, tak sempat masak lauk' }, { text: 'Sambal kedai terlalu manis dan berminyak' }, { text: 'Seminggu buka botol, dah lemau' }], bg: 'soft' }),
           B('benefits', { heading: 'Kenapa pelanggan **repeat order**', style: 'check', items: [{ text: 'Ikan bilis gred A, digoreng sampai rangup' }, { text: 'Tiada pengawet dan tiada pewarna' }, { text: 'Botol kedap udara, tahan 3 bulan' }, { text: 'Sesuai dibawa ke asrama, luar negara dan kenduri' }], bg: 'default' }),
@@ -49,10 +49,10 @@
       id: 'digital', name: 'Ebook, course or class', desc: 'Digital products and workshops. Price box, bonuses and a money-back promise.',
       build: function () {
         return page('Kelas Jualan Online', 'laut', 'moden', 'soft', { businessName: 'Akademi Niaga Kecil', stickyText: 'Daftar sekarang · RM39' }, [
-          B('hero', { eyebrow: 'Ebook + 5 video ringkas', headline: '**30 order pertama** dari TikTok & Facebook', sub: 'Panduan langkah demi langkah untuk peniaga kecil yang baru bermula. Tiada bajet iklan besar diperlukan.', btnText: 'Saya nak belajar', bg: 'default' }),
+          B('hero', { eyebrow: 'Ebook 80 muka surat + 5 video ringkas', headline: '30 order pertama dari TikTok', sub: 'Panduan langkah demi langkah untuk peniaga kecil yang baru bermula. Tiada bajet iklan besar diperlukan.', btnText: 'Saya nak belajar', bg: 'default' }),
           B('video', { heading: '', url: '', caption: 'Tonton video pengenalan 2 minit', bg: 'default' }),
           B('benefits', { heading: 'Apa yang anda akan belajar', style: 'number', items: [{ text: 'Cara pilih produk yang orang **memang cari**' }, { text: 'Tulis caption yang buat orang terus DM' }, { text: 'Susun posting 30 hari tanpa pening kepala' }, { text: 'Tutup jualan di WhatsApp dengan skrip sedia ada' }], bg: 'soft' }),
-          B('bonus', { heading: '3 bonus **percuma** hari ini', items: [
+          B('bonus', { heading: '3 bonus percuma', items: [
             { title: '50 template caption', desc: 'Salin, tukar nama produk, terus post.', value: 49 },
             { title: 'Skrip balas WhatsApp', desc: 'Untuk soalan harga, COD dan follow-up.', value: 29 },
             { title: 'Kalendar posting 30 hari', desc: 'Dalam format Google Sheets.', value: 19 }
@@ -62,7 +62,7 @@
             { name: 'Aina', info: 'Jual tudung, Johor Bahru', quote: 'Minggu pertama guna template caption, dapat 12 order. Sebelum ni 2-3 je.', image: '', stars: 5 },
             { name: 'Faizal', info: 'Kedai kek, Ipoh', quote: 'Skrip WhatsApp tu paling berguna. Customer tak lari lepas tanya harga.', image: '', stars: 5 }
           ], bg: 'default' }),
-          B('countdown', { heading: 'Harga pelancaran tamat dalam', mode: 'date', bg: 'dark' }),
+          B('countdown', { heading: 'Promo tamat dalam', mode: 'date', bg: 'dark' }),
           B('order', { heading: 'Daftar sekarang', sub: '', items: [{ name: 'Pakej Lengkap', desc: 'Ebook + video + 3 bonus', price: 39, oldPrice: 129, image: '', badge: 'Promo' }], shipping: [], askAddress: false, askNote: false, btnText: 'Daftar melalui WhatsApp', payNote: 'Selepas bayaran disahkan, link muat turun dihantar ke WhatsApp anda dalam masa 1 jam.', bg: 'soft' }),
           B('guarantee', { badge: '7 Hari', title: 'Jaminan wang dikembalikan', text: 'Cuba dulu selama 7 hari. Jika tidak berpuas hati, WhatsApp kami dan kami pulangkan wang anda sepenuhnya.', bg: 'default' }),
           B('faq', { heading: 'Soalan lazim', items: [
@@ -78,7 +78,7 @@
       id: 'service', name: 'Service booking', desc: 'Aircond, cleaning, catering, photography. Services with area-based charges.',
       build: function () {
         return page('Servis Aircond', 'pandan', 'tegas', 'sharp', { businessName: 'Sejuk Pro Servis', stickyText: 'Tempah slot sekarang' }, [
-          B('hero', { eyebrow: 'Lembah Klang · 7 hari seminggu', headline: 'Aircond tak sejuk? **Kami datang esok.**', sub: 'Cuci, servis dan baiki aircond rumah. Juruteknik bertauliah, harga jelas sebelum mula kerja.', btnText: 'Tempah slot', align: 'left', bg: 'default' }),
+          B('hero', { eyebrow: 'Lembah Klang · 7 hari seminggu', headline: 'Aircond tak sejuk?', sub: 'Kami datang esok. Cuci, servis dan baiki aircond rumah. Juruteknik bertauliah, harga jelas sebelum mula kerja.', btnText: 'Tempah slot', align: 'left', bg: 'default' }),
           B('benefits', { heading: 'Kenapa pilih kami', style: 'check', items: [{ text: 'Harga tetap, tiada caj tersembunyi' }, { text: 'Juruteknik datang tepat masa, atau servis seterusnya percuma' }, { text: 'Lantai dan dinding dilindungi semasa kerja' }, { text: 'Waranti servis 30 hari' }], bg: 'soft' }),
           B('order', { heading: 'Pilih servis', sub: 'Pilih bilangan unit aircond untuk setiap jenis servis.', items: [
             { name: 'Cuci biasa (1.0 – 1.5HP)', desc: 'Cuci filter, coil dan saluran air', price: 80, oldPrice: 0, image: '', badge: '' },

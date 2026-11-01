@@ -49,29 +49,30 @@ window.SP = window.SP || {};
 
   /* Colour presets, named after things Malaysian sellers already know. */
   SP.themes = {
-    pandan:   { label: 'Pandan',    primary: '#1f7a4d', accent: '#f0a020', bg: '#ffffff', text: '#18241d' },
-    kunyit:   { label: 'Kunyit',    primary: '#b85f00', accent: '#d8412a', bg: '#fffaf1', text: '#2a1f14' },
-    tehtarik: { label: 'Teh Tarik', primary: '#6f4428', accent: '#cf7f2a', bg: '#fbf5ee', text: '#2b1d14' },
-    laut:     { label: 'Laut',      primary: '#14598a', accent: '#ff7a1a', bg: '#f6fafd', text: '#10212e' },
-    ros:      { label: 'Ros',       primary: '#a92c59', accent: '#e8553b', bg: '#fff7f9', text: '#2d1620' },
-    malam:    { label: 'Malam',     primary: '#e3ad48', accent: '#e3ad48', bg: '#121518', text: '#eef0ec' }
+    pandan:   { label: 'Pandan',    primary: '#1d6a45', accent: '#1d6a45', bg: '#ffffff', text: '#14201a' },
+    kunyit:   { label: 'Kunyit',    primary: '#9c5a06', accent: '#b4231a', bg: '#f4f4f2', text: '#211b14' },
+    tehtarik: { label: 'Teh Tarik', primary: '#6b4026', accent: '#2a1d16', bg: '#efebe6', text: '#2a1d16' },
+    laut:     { label: 'Laut',      primary: '#0f4f7d', accent: '#0f4f7d', bg: '#ffffff', text: '#0e1b26' },
+    ros:      { label: 'Ros',       primary: '#9b2450', accent: '#9b2450', bg: '#fbf7f8', text: '#2a141d' },
+    malam:    { label: 'Malam',     primary: '#e3ad48', accent: '#e3ad48', bg: '#111315', text: '#eef0ec' }
   };
 
   SP.fonts = {
-    moden:  { label: 'Modern',   h: "'Plus Jakarta Sans', system-ui, sans-serif", b: "'Plus Jakarta Sans', system-ui, sans-serif", q: 'Plus+Jakarta+Sans:wght@400;600;800' },
-    tegas:  { label: 'Bold',     h: "'Archivo Black', 'Arial Black', sans-serif", b: "'Archivo', system-ui, sans-serif", q: 'Archivo+Black&family=Archivo:wght@400;600;800' },
-    elegan: { label: 'Elegant',  h: "'Fraunces', Georgia, serif", b: "'Figtree', system-ui, sans-serif", q: 'Fraunces:opsz,wght@9..144,700;9..144,800&family=Figtree:wght@400;600;800' },
-    mesra:  { label: 'Friendly', h: "'Baloo 2', system-ui, sans-serif", b: "'Nunito', system-ui, sans-serif", q: 'Baloo+2:wght@600;800&family=Nunito:wght@400;700;800' }
+    moden:  { label: 'Modern',   h: "'Schibsted Grotesk', system-ui, sans-serif", b: "'Schibsted Grotesk', system-ui, sans-serif", q: 'Schibsted+Grotesk:wght@400;600;800' },
+    tegas:  { label: 'Bold',     h: "'Archivo', system-ui, sans-serif", b: "'Archivo', system-ui, sans-serif", q: 'Archivo:wdth,wght@75..100,400;75..100,600;75..100,800' },
+    elegan: { label: 'Elegant',  h: "'Fraunces', Georgia, serif", b: "'Figtree', system-ui, sans-serif", q: 'Fraunces:opsz,wght@9..144,600;9..144,700&family=Figtree:wght@400;600' },
+    mesra:  { label: 'Friendly', h: "'Gabarito', system-ui, sans-serif", b: "'Gabarito', system-ui, sans-serif", q: 'Gabarito:wght@400;600;800' }
   };
   SP.fontsURL = function (keys) {
     var qs = keys.map(function (k) { return SP.fonts[k].q; });
     return 'https://fonts.googleapis.com/css2?family=' + qs.join('&family=') + '&display=swap';
   };
 
+  /* Buttons are either square or fully round, never the in-between soft radius. */
   SP.corners = {
-    sharp: { label: 'Sharp',   r: '4px',  rb: '4px' },
-    soft:  { label: 'Soft',    r: '14px', rb: '12px' },
-    round: { label: 'Rounded', r: '22px', rb: '999px' }
+    sharp: { label: 'Square',  r: '0px',  rb: '0px' },
+    soft:  { label: 'Soft',    r: '6px',  rb: '999px' },
+    round: { label: 'Rounded', r: '20px', rb: '999px' }
   };
 
   SP.defaultTheme = function (preset) {

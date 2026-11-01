@@ -62,6 +62,9 @@
     if (!text) return '';
     return '<a class="sp-btn ' + (extra || '') + '" href="' + esc(link || '#order') + '">' + esc(text) + '</a>';
   }
+  function split(h, body) {
+    return '<div class="sp-split"><div class="sp-split-h">' + h + '</div><div class="sp-split-b">' + body + '</div></div>';
+  }
   function head(h, sub, level) {
     if (!h && !sub) return '';
     var tag = level === 1 ? 'h1' : 'h2';
@@ -87,7 +90,7 @@
   };
   SP.F = F;
   var BG = F.seg('bg', 'Section background', [['default', 'Plain'], ['soft', 'Tint'], ['primary', 'Brand'], ['dark', 'Dark']]);
-  var BOLD_HINT = 'Wrap words in **double stars** to highlight them.';
+  var BOLD_HINT = 'Wrap words in **double stars** to make them bold.';
   var LINK_HINT = 'Use #order to jump to your order form, or paste any web link.';
 
   function inDays(d) {
@@ -101,24 +104,25 @@
     hero: {
       label: 'Headline', icon: 'hero', hint: 'Big opening title',
       defaults: function () {
-        return { eyebrow: 'Promosi minggu ini', headline: 'Tulis tajuk utama yang **menarik** di sini', sub: 'Terangkan dalam satu ayat apa yang pelanggan dapat.', image: '', btnText: 'Saya nak order', btnLink: '#order', align: 'center', bg: 'default' };
+        return { eyebrow: 'Promosi minggu ini', headline: 'Tulis tajuk utama yang **menarik** di sini', sub: 'Terangkan dalam satu ayat apa yang pelanggan dapat.', image: '', btnText: 'Saya nak order', btnLink: '#order', align: 'left', bg: 'default' };
       },
       fields: [
-        F.text('eyebrow', 'Small text above title', { hint: 'Optional. E.g. "Edisi terhad" or "Sejak 1998".' }),
+        F.text('eyebrow', 'Short fact under the button', { hint: 'Optional. A reason to trust you, e.g. "Resepi keluarga sejak 1998".' }),
         F.area('headline', 'Main title', { hint: BOLD_HINT, rows: 3 }),
         F.area('sub', 'Supporting sentence', { rows: 3 }),
         F.img('image', 'Product photo'),
         F.text('btnText', 'Button text', { hint: 'Leave empty to hide the button.' }),
         F.text('btnLink', 'Button goes to', { hint: LINK_HINT }),
-        F.seg('align', 'Alignment', [['center', 'Centre'], ['left', 'Left']]),
+        F.seg('align', 'Alignment', [['left', 'Left'], ['center', 'Centre']]),
         BG
       ],
       render: function (p, c) {
-        return '<div class="sp-hero sp-al-' + esc(p.align) + '">' +
-          (p.eyebrow ? '<div class="sp-eyebrow">' + esc(p.eyebrow) + '</div>' : '') +
+        var pic = img(p.image, c, 'sp-hero-img', p.headline);
+        return '<div class="sp-hero sp-al-' + esc(p.align) + (pic ? ' has-pic' : '') + '"><div class="sp-hero-copy">' +
           (c.editor || c.thumb ? '<h2 class="sp-h1">' + rich(p.headline) + '</h2>' : '<h1 class="sp-h1">' + rich(p.headline) + '</h1>') +
           (p.sub ? '<p class="sp-lead">' + rich(p.sub) + '</p>' : '') +
-          img(p.image, c, 'sp-hero-img', p.headline) + btn(p.btnText, p.btnLink) + '</div>';
+          btn(p.btnText, p.btnLink) +
+          (p.eyebrow ? '<p class="sp-fact">' + esc(p.eyebrow) + '</p>' : '') + '</div>' + pic + '</div>';
       }
     },
 
@@ -180,10 +184,11 @@
         F.list('items', 'Points', [F.area('text', 'Point', { rows: 2, hint: BOLD_HINT })], { itemLabel: 'Point', addLabel: 'Add point', newItem: function () { return { text: 'Point baru' }; } }), BG],
       render: function (p) {
         var lis = (p.items || []).map(function (it, i) {
-          var mark = p.style === 'number' ? '<span class="sp-mark sp-mark-n">' + (i + 1) + '</span>' : '<span class="sp-mark sp-mark-' + esc(p.style) + '">' + (p.style === 'cross' ? svgCross : svgCheck) + '</span>';
+          var mark = p.style === 'number' ? '' : '<span class="sp-mark sp-mark-' + esc(p.style) + '">' + (p.style === 'cross' ? svgCross : svgCheck) + '</span>';
           return '<li>' + mark + '<span>' + rich(it.text) + '</span></li>';
         }).join('');
-        return head(p.heading, p.sub) + '<ul class="sp-points">' + lis + '</ul>';
+        var tag = p.style === 'number' ? 'ol' : 'ul';
+        return split(head(p.heading, p.sub), '<' + tag + ' class="sp-points sp-points-' + esc(p.style) + '">' + lis + '</' + tag + '>');
       }
     },
 
@@ -250,7 +255,7 @@
             (type === 'textarea' ? '<textarea id="' + id + '" name="' + name + '" rows="3"' + (req ? ' required' : '') + '></textarea>' :
               '<input id="' + id + '" name="' + name + '" type="' + type + '"' + (type === 'tel' ? ' inputmode="tel" autocomplete="tel"' : ' autocomplete="name"') + (req ? ' required' : '') + '>') + '</label>';
         };
-        return head(p.heading, p.sub) +
+        return split(head(p.heading, p.sub),
           '<form class="sp-order" novalidate data-cfg="' + esc(JSON.stringify(cfg)) + '">' +
           '<div class="sp-items">' + rows + '</div>' + shipHtml +
           '<fieldset class="sp-cust"><legend>' + L.customer + '</legend>' + f('name', L.name, 'text', true) + f('phone', L.phone, 'tel', true) +
@@ -261,7 +266,7 @@
           '<p class="sp-err" role="alert" hidden></p>' +
           '<button type="submit" class="sp-btn sp-btn-wa">' + SP.svgChat + '<span>' + esc(p.btnText || 'Order') + '</span></button>' +
           (p.payNote ? '<p class="sp-small sp-center">' + rich(p.payNote) + '</p>' : '') +
-          '<div class="sp-demo" hidden></div></form>';
+          '<div class="sp-demo" hidden></div></form>');
       }
     },
 
@@ -274,13 +279,12 @@
         F.text('btnText', 'Button text'), F.text('btnLink', 'Button goes to', { hint: LINK_HINT }), F.text('note', 'Small note (optional)'), BG],
       render: function (p) {
         var save = Number(p.oldPrice) - Number(p.price);
-        return '<div class="sp-pricebox">' + (p.badge ? '<div class="sp-pricebox-badge">' + esc(p.badge) + '</div>' : '') +
-          '<h2 class="sp-h2">' + rich(p.title) + '</h2>' +
-          '<div class="sp-bigprice">' + (Number(p.oldPrice) > Number(p.price) ? '<s>' + SP.money(p.oldPrice) + '</s>' : '') + '<b>' + SP.money(p.price) + '</b></div>' +
-          (save > 0 ? '<div class="sp-save">Jimat ' + SP.money(save) + '</div>' : '') +
-          (p.priceNote ? '<p class="sp-small">' + esc(p.priceNote) + '</p>' : '') +
-          '<ul class="sp-points sp-points-tight">' + (p.items || []).map(function (it) { return '<li><span class="sp-mark sp-mark-check">' + svgCheck + '</span><span>' + rich(it.text) + '</span></li>'; }).join('') + '</ul>' +
-          btn(p.btnText, p.btnLink) + (p.note ? '<p class="sp-small sp-center">' + esc(p.note) + '</p>' : '') + '</div>';
+        var meta = [p.badge, save > 0 ? 'Jimat ' + SP.money(save) : '', p.priceNote].filter(Boolean).map(esc).join(' · ');
+        return '<div class="sp-offer"><div class="sp-offer-a"><h2 class="sp-h2">' + rich(p.title) + '</h2>' +
+          '<div class="sp-bigprice"><b>' + SP.money(p.price) + '</b>' + (Number(p.oldPrice) > Number(p.price) ? '<s>' + SP.money(p.oldPrice) + '</s>' : '') + '</div>' +
+          (meta ? '<p class="sp-offer-meta">' + meta + '</p>' : '') + btn(p.btnText, p.btnLink) +
+          (p.note ? '<p class="sp-small">' + esc(p.note) + '</p>' : '') + '</div>' +
+          '<ul class="sp-points sp-points-check">' + (p.items || []).map(function (it) { return '<li><span class="sp-mark sp-mark-check">' + svgCheck + '</span><span>' + rich(it.text) + '</span></li>'; }).join('') + '</ul></div>';
       }
     },
 
@@ -294,12 +298,13 @@
         var L = SP.L[c.lang] || SP.L.ms, sum = 0;
         var cards = (p.items || []).map(function (it, i) {
           sum += Number(it.value) || 0;
-          return '<div class="sp-bonus"><div class="sp-bonus-n">#' + (i + 1) + '</div><div><div class="sp-bonus-t">' + esc(it.title) + '</div>' + (it.desc ? '<div class="sp-item-desc">' + esc(it.desc) + '</div>' : '') + '</div>' +
-            (Number(it.value) ? '<div class="sp-bonus-v">' + L.worth + '<br><s>' + SP.money(it.value) + '</s></div>' : '') + '</div>';
+          return '<div class="sp-bonus"><div><div class="sp-bonus-t">' + esc(it.title) + '</div>' + (it.desc ? '<div class="sp-item-desc">' + esc(it.desc) + '</div>' : '') + '</div>' +
+            (Number(it.value) ? '<div class="sp-bonus-v"><s>' + SP.money(it.value) + '</s></div>' : '') + '</div>';
         }).join('');
-        return head(p.heading) + '<div class="sp-bonuses">' + cards + '</div>' +
-          (sum ? '<p class="sp-center sp-bonus-sum">' + L.worth + ' ' + SP.money(sum) + ' · <b>' + L.free + '</b></p>' : '') +
-          (p.note ? '<p class="sp-small sp-center">' + esc(p.note) + '</p>' : '');
+        var body = '<div class="sp-bonuses">' + cards +
+          (sum ? '<div class="sp-bonus sp-bonus-sum"><div>' + L.worth + ' ' + SP.money(sum) + '</div><div class="sp-bonus-v">' + L.free + '</div></div>' : '') + '</div>' +
+          (p.note ? '<p class="sp-small">' + esc(p.note) + '</p>' : '');
+        return split(head(p.heading), body);
       }
     },
 
@@ -314,9 +319,10 @@
         var cards = (p.items || []).map(function (it) {
           var n = Number(it.stars) || 0, stars = '';
           for (var i = 0; i < n; i++) stars += svgStar;
-          var av = it.image ? '<img class="sp-av" src="' + esc(it.image) + '" alt="">' : '<span class="sp-av sp-av-i">' + esc(String(it.name || '?').trim().charAt(0).toUpperCase()) + '</span>';
-          return '<figure class="sp-review">' + (stars ? '<div class="sp-stars" aria-label="' + n + ' / 5">' + stars + '</div>' : '') +
-            '<blockquote>' + rich(it.quote) + '</blockquote><figcaption>' + av + '<span><b>' + esc(it.name) + '</b>' + (it.info ? '<small>' + esc(it.info) + '</small>' : '') + '</span></figcaption></figure>';
+          var av = it.image ? '<img class="sp-av" src="' + esc(it.image) + '" alt="">' : '';
+          return '<figure class="sp-review"><blockquote>' + rich(it.quote) + '</blockquote><figcaption>' + av +
+            '<span><b>' + esc(it.name) + '</b>' + (it.info ? ', ' + esc(it.info) : '') + '</span>' +
+            (stars ? '<span class="sp-stars" role="img" aria-label="' + n + ' / 5">' + stars + '</span>' : '') + '</figcaption></figure>';
         }).join('');
         return head(p.heading) + '<div class="sp-reviews">' + cards + '</div>';
       }
@@ -328,9 +334,9 @@
       fields: [F.text('heading', 'Heading'),
         F.list('items', 'Questions', [F.text('q', 'Question'), F.area('a', 'Answer', { rows: 3 })], { itemLabel: 'Question', addLabel: 'Add question', titleKey: 'q', newItem: function () { return { q: 'Soalan baru?', a: 'Jawapan.' }; } }), BG],
       render: function (p) {
-        return head(p.heading) + '<div class="sp-faq">' + (p.items || []).map(function (it, i) {
+        return split(head(p.heading), '<div class="sp-faq">' + (p.items || []).map(function (it, i) {
           return '<details' + (i === 0 ? ' open' : '') + '><summary>' + esc(it.q) + '</summary><div>' + rich(it.a) + '</div></details>';
-        }).join('') + '</div>';
+        }).join('') + '</div>');
       }
     },
 
@@ -344,10 +350,10 @@
         F.text('expired', 'Text when time is up (optional)'), BG],
       render: function (p, c) {
         var L = SP.L[c.lang] || SP.L.ms;
-        var u = function (k, l) { return '<div class="sp-cd-u"><b data-u="' + k + '">00</b><span>' + l + '</span></div>'; };
+        var u = function (k, l) { return '<div class="sp-cd-u"><b data-u="' + k + '">0</b><span>' + l + '</span></div>'; };
         return '<div class="sp-countdown" data-mode="' + esc(p.mode) + '" data-end="' + esc(p.end) + '" data-minutes="' + esc(p.minutes) + '" data-key="' + esc(c.bid || '') + '">' +
-          (p.heading ? '<div class="sp-cd-h">' + esc(p.heading) + '</div>' : '') +
-          '<div class="sp-cd-row">' + u('d', L.days) + u('h', L.hours) + u('m', L.mins) + u('s', L.secs) + '</div>' +
+          (p.heading ? '<h2 class="sp-h2">' + esc(p.heading) + '</h2>' : '') +
+          '<div class="sp-cd-row" role="timer">' + u('d', L.days) + u('h', L.hours) + u('m', L.mins) + u('s', L.secs) + '</div>' +
           '<div class="sp-cd-done">' + esc(p.expired || L.expired) + '</div></div>';
       }
     },
@@ -357,7 +363,7 @@
       defaults: function () { return { badge: '100%', title: 'Jaminan puas hati', text: 'Jika produk sampai rosak atau tidak seperti yang diterangkan, kami ganti baru atau pulangkan wang anda.', bg: 'default' }; },
       fields: [F.text('badge', 'Badge text', { hint: 'Short, like "100%" or "7 Hari".' }), F.text('title', 'Title'), F.area('text', 'Promise', { rows: 4 }), BG],
       render: function (p) {
-        return '<div class="sp-guarantee"><div class="sp-seal"><span>' + esc(p.badge) + '</span></div><div><h2 class="sp-h3">' + rich(p.title) + '</h2><p>' + rich(p.text) + '</p></div></div>';
+        return '<div class="sp-guarantee">' + (p.badge ? '<p class="sp-guarantee-mark">' + esc(p.badge) + '</p>' : '') + '<div class="sp-guarantee-t"><h2 class="sp-h2">' + rich(p.title) + '</h2><p>' + rich(p.text) + '</p></div></div>';
       }
     },
 
@@ -365,14 +371,14 @@
       label: 'Call to action', icon: 'megaphone', hint: 'Reminder with a button',
       defaults: function () { return { heading: 'Jangan tunggu lagi. **Stok terhad!**', text: 'Tekan butang di bawah dan selesaikan tempahan dalam 1 minit.', btnText: 'Order sekarang', btnLink: '#order', bg: 'primary' }; },
       fields: [F.text('heading', 'Heading', { hint: BOLD_HINT }), F.area('text', 'Text', { rows: 3 }), F.text('btnText', 'Button text'), F.text('btnLink', 'Button goes to', { hint: LINK_HINT }), BG],
-      render: function (p) { return '<div class="sp-cta">' + head(p.heading, p.text) + btn(p.btnText, p.btnLink) + '</div>'; }
+      render: function (p) { return '<div class="sp-cta">' + (p.heading ? '<h2 class="sp-h2">' + rich(p.heading) + '</h2>' : '') + '<div class="sp-cta-b">' + (p.text ? '<p class="sp-lead">' + rich(p.text) + '</p>' : '') + btn(p.btnText, p.btnLink) + '</div></div>'; }
     },
 
     spacer: {
-      label: 'Space / line', icon: 'spacer', hint: 'Breathing room',
+      label: 'Space', icon: 'spacer', hint: 'Breathing room',
       defaults: function () { return { size: 'm', line: true, bg: 'default' }; },
-      fields: [F.seg('size', 'Height', [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]), F.toggle('line', 'Show a line'), BG],
-      render: function (p) { return '<div class="sp-spacer sp-spacer-' + esc(p.size) + '">' + (p.line ? '<hr>' : '') + '</div>'; }
+      fields: [F.seg('size', 'Height', [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]), BG],
+      render: function (p) { return '<div class="sp-spacer sp-spacer-' + esc(p.size) + '"></div>'; }
     },
 
     footer: {
@@ -380,8 +386,9 @@
       defaults: function () { return { business: 'Nama Perniagaan Anda', reg: 'SSM: 000000000000', contact: 'Hubungi kami di WhatsApp untuk sebarang pertanyaan.', bg: 'dark' }; },
       fields: [F.text('business', 'Business name'), F.text('reg', 'Registration no. (optional)', { hint: 'Showing your SSM number builds trust.' }), F.area('contact', 'Contact or address', { rows: 3 }), BG],
       render: function (p) {
-        return '<div class="sp-footer"><b>' + esc(p.business) + '</b>' + (p.reg ? '<span>' + esc(p.reg) + '</span>' : '') + (p.contact ? '<span>' + rich(p.contact) + '</span>' : '') +
-          '<small>© ' + new Date().getFullYear() + ' ' + esc(p.business) + '</small></div>';
+        return '<div class="sp-footer"><p class="sp-footer-name">' + esc(p.business) + '</p><div class="sp-footer-meta">' +
+          (p.contact ? '<span>' + rich(p.contact) + '</span>' : '') + (p.reg ? '<span>' + esc(p.reg) + '</span>' : '') +
+          '<span>© ' + new Date().getFullYear() + ' ' + esc(p.business) + '</span></div></div>';
       }
     }
   };
@@ -419,15 +426,14 @@
   };
 
   SP.renderFixed = function (page, ctx) {
-    var s = page.settings || {}, L = SP.L[ctx.lang] || SP.L.ms, out = '';
+    var s = page.settings || {}, L = SP.L[ctx.lang] || SP.L.ms;
     var num = SP.waNumber(s.whatsapp);
-    if (s.waFloat && (num || ctx.editor)) {
-      out += '<a class="sp-wa" href="https://wa.me/' + esc(num) + '?text=' + encodeURIComponent(L.chat) + '" target="_blank" rel="noopener" aria-label="WhatsApp">' + SP.svgChat + '</a>';
-    }
+    var wa = s.waFloat && (num || ctx.editor) ?
+      '<a class="sp-wa" href="https://wa.me/' + esc(num) + '?text=' + encodeURIComponent(L.chat) + '" target="_blank" rel="noopener" aria-label="WhatsApp">' + SP.svgChat + '</a>' : '';
     if (s.sticky && s.stickyText) {
-      out += '<div class="sp-sticky"><a class="sp-btn" href="' + esc(s.stickyLink || '#order') + '">' + esc(s.stickyText) + '</a></div>';
+      return '<div class="sp-fixed has-bar"><div class="sp-sticky"><a class="sp-btn" href="' + esc(s.stickyLink || '#order') + '">' + esc(s.stickyText) + '</a>' + wa + '</div></div>';
     }
-    return out ? '<div class="sp-fixed' + (s.sticky && s.stickyText ? ' has-bar' : '') + '">' + out + '</div>' : '';
+    return wa ? '<div class="sp-fixed">' + wa + '</div>' : '';
   };
 
   SP.renderPage = function (page, ctx) {

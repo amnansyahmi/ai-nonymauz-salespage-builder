@@ -98,7 +98,7 @@ function SP_initPage(root) {
     } else {
       end = new Date(el.getAttribute('data-end')).getTime() || 0;
     }
-    var put = function (k, n) { var b = el.querySelector('[data-u="' + k + '"]'); if (b) b.textContent = String(n).padStart(2, '0'); };
+    var put = function (k, n) { var b = el.querySelector('[data-u="' + k + '"]'); if (b) b.textContent = String(n); };
     function tick() {
       var d = Math.max(0, end - Date.now());
       put('d', Math.floor(d / 864e5)); put('h', Math.floor(d / 36e5) % 24);
@@ -108,4 +108,31 @@ function SP_initPage(root) {
     tick();
     root.__spTimers.push(setInterval(tick, 1000));
   });
+
+  /* ---------- the order bar steps aside while the order form or the footer is on screen ---------- */
+  var bar = root === document && document.querySelector('.sp-fixed.has-bar');
+  if (bar && window.IntersectionObserver) {
+    var seen = new Set();
+    var away = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { e.isIntersecting ? seen.add(e.target) : seen.delete(e.target); });
+      bar.classList.toggle('is-away', seen.size > 0);
+    });
+    document.querySelectorAll('#order, .sp-b-footer').forEach(function (el) { away.observe(el); });
+  }
+
+  /* ---------- entrance motion (live page only) ---------- */
+  if (root === document && window.IntersectionObserver && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+    var sel = '.sp-hero-copy > *, .sp-hero-img, .sp-head > *, .sp-text > *, .sp-points li, .sp-review, .sp-bonus, .sp-faq details, .sp-cd-u, .sp-item, .sp-radio, ' +
+      '.sp-offer-a > *, .sp-guarantee > *, .sp-cta > *, .sp-cta-b > *, .sp-countdown > .sp-h2, .sp-footer > *, .sp-figure, .sp-gal-cell, .sp-cust, .sp-sum';
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var el = e.target, sibs = [].filter.call(el.parentNode.children, function (x) { return x.classList.contains('sp-rise'); });
+        el.style.transitionDelay = Math.min(sibs.indexOf(el), 6) * 80 + 'ms';
+        el.classList.add('is-in');
+        io.unobserve(el);
+      });
+    }, { rootMargin: '0px 0px -6% 0px' });
+    document.querySelectorAll(sel).forEach(function (el) { el.classList.add('sp-rise'); io.observe(el); });
+  }
 }

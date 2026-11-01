@@ -36,6 +36,10 @@
   SP.normalizePage = function (p) {
     p.id = p.id || SP.uid();
     p.theme = Object.assign(SP.defaultTheme(), p.theme || {});
+    /* a named preset follows the preset's current colours; custom colours are left alone */
+    var pre = SP.themes[p.theme.preset];
+    if (pre) Object.assign(p.theme, { primary: pre.primary, accent: pre.accent, bg: pre.bg, text: pre.text });
+    if (!SP.fonts[p.theme.font]) p.theme.font = 'moden';
     p.settings = Object.assign({ businessName: '', whatsapp: '', lang: 'ms', waFloat: true, sticky: false, stickyText: 'Order sekarang', stickyLink: '#order', seoTitle: '', seoDesc: '', pixelId: '' }, p.settings || {});
     p.blocks = (p.blocks || []).map(SP.normalizeBlock).filter(Boolean);
     return p;
