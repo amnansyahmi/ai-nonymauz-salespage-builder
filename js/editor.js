@@ -29,11 +29,6 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove('on'); }, action ? 6000 : 2600);
   }
-  function fmtDate(ts) {
-    if (!ts) return '';
-    var d = new Date(ts);
-    return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' });
-  }
   function copyText(text, okMsg) {
     var done = function () { toast(okMsg || 'Copied'); };
     var fallback = function () {
@@ -74,6 +69,14 @@
     return '<div class="sp-page ' + (extraClass || '') + (s.sticky && s.stickyText ? ' has-sticky' : '') + '" style="' + esc(SP.themeVars(page.theme)) + '">' + SP.renderPage(page, ctx) + '</div>';
   }
 
+  /* A picture of the seller's page, drawn in its own sandboxed frame so its styles stay its own. */
+  function thumbFrame(page, width) {
+    var doc = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="' + SP.fontsURL([page.theme.font]) + '">' +
+      '<style>html,body{margin:0;overflow:hidden}' + SP.pageCSS + '.sp-fixed{display:none}</style></head><body>' +
+      pageFrame(page, { editor: true, thumb: true }) + '</body></html>';
+    return '<iframe class="tframe" title="" tabindex="-1" aria-hidden="true" sandbox="" loading="lazy" style="width:' + width + 'px" srcdoc="' + esc(doc) + '"></iframe>';
+  }
+
   /* ================= ROUTING ================= */
   function route() {
     var hash = location.hash.slice(1);
@@ -87,65 +90,113 @@
   window.addEventListener('hashchange', route);
 
   /* ================= HOME ================= */
+  /* Question this screen answers: "Which of my pages can take orders, and what do I edit next?" */
+  var BACKUP_KEY = 'nonymauz.lastBackup';
+  function lastBackup() { try { return +localStorage.getItem(BACKUP_KEY) || 0; } catch (e) { return 0; } }
+  function fmtPhone(d) {
+    if (!d) return '';
+    var m = String(d).match(/^60(\d{2})(\d{3,4})(\d{4})$/);
+    return m ? '+60 ' + m[1] + '-' + m[2] + ' ' + m[3] : '+' + d;
+  }
+  function relDate(ts) {
+    if (!ts) return '—';
+    var d = new Date(ts), now = new Date();
+    var day = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    var diff = Math.round((day(now) - day(d)) / 864e5);
+    var time = d.toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' });
+    if (diff === 0) return 'Today, ' + time;
+    if (diff === 1) return 'Yesterday, ' + time;
+    return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+  }
+  /* Facts about a page, computed from its own sections. */
+  function pageFacts(p) {
+    var order = p.blocks.find(function (b) { return b.type === 'order'; });
+    var prices = order ? order.props.items.map(function (i) { return Number(i.price) || 0; }) : [];
+    var min = prices.length ? Math.min.apply(null, prices) : 0, max = prices.length ? Math.max.apply(null, prices) : 0;
+    var wa = SP.waNumber(p.settings.whatsapp);
+    var status = !order ? { cls: 'neutral', text: 'No order form' } : !wa ? { cls: 'warn', text: 'No WhatsApp number' } : { cls: 'ok', text: 'Ready to share' };
+    return {
+      sections: p.blocks.length, packages: prices.length, wa: wa, hasOrder: !!order, status: status,
+      range: !prices.length ? '—' : (min === max ? SP.money(min) : SP.money(min) + '–' + SP.money(max))
+    };
+  }
+  var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : many); };
+
   function renderHome() {
-    document.title = 'Nonymauz Salespage Builder';
-    var pages = SP.store.all();
+    document.title = 'Salespages · Nonymauz';
+    var pages = SP.store.all().map(function (pg) { return SP.normalizePage(SP.clone(pg)); });
+    var facts = pages.map(pageFacts);
+    var notReady = facts.filter(function (f) { return f.hasOrder && !f.wa; }).length;
+    var bk = lastBackup();
+    var sub;
+    if (!pages.length) sub = 'Pick a template below to make your first page. It takes about 10 minutes.';
+    else {
+      sub = notReady ? '<b>' + plural(notReady, 'page', 'pages') + ' can’t take orders yet:</b> add a WhatsApp number. ' : '<b>All pages can take orders.</b> ';
+      sub += bk ? 'Last backup ' + relDate(bk).toLowerCase() + '.' : 'Not backed up yet. Pages are saved only in this browser.';
+    }
     app.className = 'v-home';
     app.innerHTML =
-      '<div class="home">' +
-      '<header class="home-top"><div class="brand">' + logo() + '<span>Nonymauz<small>Salespage Builder</small></span></div>' +
-      '<div class="home-actions"><button type="button" class="btn ghost" id="btn-backup">' + icon('download') + 'Backup all</button>' +
-      '<label class="btn ghost" for="restore-file">' + icon('upload') + 'Restore</label><input type="file" id="restore-file" accept="application/json,.json" hidden></div></header>' +
-      '<section class="home-intro"><h1>Your salespage, ready in <em>10 minutes</em>.</h1>' +
-      '<p>Pick a template, change the words, photos and prices, then publish. No coding. Orders come straight to your WhatsApp.</p>' +
-      '<ol class="steps"><li><b>1</b>Choose a template</li><li><b>2</b>Click any part to edit it</li><li><b>3</b>Download and put it online</li></ol></section>' +
-      '<section class="home-sec"><h2>Start a new page</h2><div class="tpl-grid">' +
-      SP.templates.map(function (t) {
-        var p = SP.normalizePage(t.build());
-        p.blocks = p.blocks.slice(0, 4);
-        return '<article class="tpl" data-tpl="' + t.id + '"><div class="thumb" inert aria-hidden="true">' + pageFrame(p, { editor: true, thumb: true }) + '</div>' +
-          '<div class="tpl-meta"><b>' + esc(t.name) + '</b><span>' + esc(t.desc) + '</span><button type="button" class="tpl-go">Use this template</button></div></article>';
-      }).join('') + '</div></section>' +
-      '<section class="home-sec"><h2>My pages <span class="count">' + pages.length + '</span></h2>' +
-      (pages.length ? '<div class="pages-grid">' + pages.map(function (pg) {
-        var p = SP.normalizePage(SP.clone(pg));
-        var full = p.blocks.length;
-        p.blocks = p.blocks.slice(0, 3);
-        return '<article class="pcard" data-id="' + p.id + '"><div class="thumb" inert aria-hidden="true" data-open>' + pageFrame(p, { editor: true, thumb: true }) + '</div>' +
-          '<div class="pcard-meta"><b>' + esc(p.name) + '</b><span>' + full + ' sections · edited ' + fmtDate(pg.updatedAt) + '</span></div>' +
-          '<div class="pcard-actions"><a class="btn primary sm" href="#edit-' + p.id + '">Edit</a>' +
-          '<button type="button" class="btn ghost sm" data-act="dup">' + icon('copy') + 'Duplicate</button>' +
-          '<button type="button" class="btn ghost sm danger" data-act="del">' + icon('trash') + '<span>Delete</span></button></div></article>';
-      }).join('') + '</div>' : '<div class="empty-pages">' + icon('file') + '<p>No pages yet. Pick a template above to make your first one.</p></div>') +
-      '</section><footer class="home-foot">Pages are saved in this browser. Use <b>Backup all</b> now and then so you never lose your work.</footer></div>';
+      '<header class="topbar"><a class="wordmark" href="#">' + logo() + 'Nonymauz</a>' +
+      '<div class="topbar-r"><button type="button" class="btn" id="btn-backup" title="Download a backup of all pages">' + icon('download') + '<span>Back up pages</span></button>' +
+      '<label class="btn tertiary" for="restore-file" title="Restore pages from a backup file">' + icon('upload') + '<span>Restore</span></label><input type="file" id="restore-file" accept="application/json,.json" hidden></div></header>' +
+      '<main class="sheet"><div class="col">' +
+      '<div class="title-row"><div><h1>Salespages</h1><p class="subline">' + sub + '</p></div>' +
+      '<button type="button" class="btn primary" id="btn-new">' + icon('plus') + 'New page</button></div>' +
 
-    $$('.tpl', app).forEach(function (b) {
-      b.addEventListener('click', function () {
-        var p = SP.createFromTemplate(b.getAttribute('data-tpl'));
+      '<section class="block" aria-labelledby="h-pages"><div class="block-h"><h2 id="h-pages">Your pages</h2>' + (pages.length ? '<p class="num">' + plural(pages.length, 'page', 'pages') + '</p>' : '') + '</div>' +
+      (pages.length ? '<table class="ptable"><thead><tr><th>Page</th><th class="num c-price">Prices</th><th class="c-wa">Orders go to</th><th class="num c-date">Edited</th><th><span class="sr">Actions</span></th></tr></thead><tbody>' +
+        pages.map(function (p, i) {
+          var f = facts[i];
+          var mini = SP.clone(p); mini.blocks = mini.blocks.slice(0, 1);
+          var waCell = f.wa ? '<span class="num">' + esc(fmtPhone(f.wa)) + '</span>' : '<span class="pill ' + f.status.cls + '">' + f.status.text + '</span>';
+          return '<tr data-id="' + p.id + '"><td><div class="pcell"><div class="mini" data-open aria-hidden="true">' + thumbFrame(mini, 800) + '</div>' +
+            '<div><a class="pname" href="#edit-' + p.id + '">' + esc(p.name) + '</a><span class="sub">' + plural(f.sections, 'section', 'sections') + (f.packages ? ' · ' + plural(f.packages, 'package', 'packages') : '') + '</span>' +
+            '<span class="sub sub-phone"><span class="pill ' + f.status.cls + '">' + f.status.text + '</span><span class="num">' + f.range + '</span><span>' + relDate(p.updatedAt) + '</span></span></div></div></td>' +
+            '<td class="num c-price">' + f.range + '</td><td class="c-wa">' + waCell + '</td><td class="num c-date">' + relDate(p.updatedAt) + '</td>' +
+            '<td class="acts"><a class="btn sm" href="#edit-' + p.id + '">Edit</a> <button type="button" class="icon-btn" data-menu aria-haspopup="true" aria-expanded="false" aria-label="More actions for ' + esc(p.name) + '">' + icon('more') + '</button></td></tr>';
+        }).join('') + '</tbody></table>'
+        : '<div class="empty-slot">No pages yet. Your pages will be listed here with their prices and the WhatsApp number orders go to.</div>') +
+      '</section>' +
+
+      '<section class="block" id="templates" aria-labelledby="h-tpl"><div class="block-h"><h2 id="h-tpl">Start from a template</h2><p>Every template has an order form that sends to WhatsApp.</p></div><div class="tpl-grid">' +
+      SP.templates.map(function (t) {
+        var p = SP.normalizePage(t.build()), f = pageFacts(p);
+        var thumb = SP.clone(p); thumb.blocks = thumb.blocks.slice(0, 3);
+        return '<article class="tpl" data-tpl="' + t.id + '"><div class="thumb" aria-hidden="true">' + thumbFrame(thumb, 840) + '</div>' +
+          '<div class="tpl-meta"><b>' + esc(t.name) + '</b><span>' + esc(t.desc) + '</span><span class="sub num">' + plural(f.sections, 'section', 'sections') + ' · ' + plural(f.packages, 'package', 'packages') + ' · ' + SP.themes[p.theme.preset].label + ' colours</span></div>' +
+          '<button type="button" class="tpl-go"><span>Use the ' + esc(t.name) + ' template</span></button></article>';
+      }).join('') + '</div></section>' +
+      '</div></main>';
+
+    var fit = function (t) { if (t.clientWidth) t.style.setProperty('--k', (t.clientWidth / 840).toFixed(4)); };
+    if (window.ResizeObserver) { var ro = new ResizeObserver(function (es) { es.forEach(function (e) { fit(e.target); }); }); $$('.thumb', app).forEach(function (t) { ro.observe(t); }); }
+    else $$('.thumb', app).forEach(fit);
+    $$('.tpl', app).forEach(function (card) {
+      $('.tpl-go', card).addEventListener('click', function () {
+        var p = SP.createFromTemplate(card.getAttribute('data-tpl'));
         if (!SP.store.put(p)) return toast('Browser storage is full. Delete an old page or use smaller photos.');
         location.hash = 'edit-' + p.id;
       });
     });
-    $$('.pcard', app).forEach(function (card) {
-      var id = card.getAttribute('data-id');
-      card.addEventListener('click', function (e) {
+    $('#btn-new').addEventListener('click', function () {
+      var t = $('#templates');
+      t.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      $('.tpl-go', t).focus({ preventScroll: true });
+    });
+    $$('.ptable tr[data-id]', app).forEach(function (row) {
+      var id = row.getAttribute('data-id');
+      var name = $('.pname', row).textContent;
+      row.addEventListener('click', function (e) {
         if (e.target.closest('[data-open]')) { location.hash = 'edit-' + id; return; }
-        var b = e.target.closest('button[data-act]');
-        if (!b) return;
-        if (b.getAttribute('data-act') === 'dup') {
-          var p = SP.store.get(id); p.id = SP.uid(); p.name += ' (copy)';
-          SP.store.put(p) ? renderHome() : toast('Browser storage is full.');
-        } else if (b.classList.contains('confirm')) {
-          SP.store.remove(id); toast('Page deleted'); renderHome();
-        } else {
-          b.classList.add('confirm'); b.querySelector('span').textContent = 'Tap again to delete';
-          setTimeout(function () { if (b.isConnected) { b.classList.remove('confirm'); b.querySelector('span').textContent = 'Delete'; } }, 3500);
-        }
+        var mb = e.target.closest('[data-menu]');
+        if (mb) { e.stopPropagation(); openRowMenu(row, mb, id, name); }
       });
     });
     $('#btn-backup').addEventListener('click', function () {
       var ok = SP.download('nonymauz-backup-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify({ app: 'nonymauz', version: 1, pages: SP.store.all() }), 'application/json');
+      if (ok) { try { localStorage.setItem(BACKUP_KEY, String(Date.now())); } catch (x) {} }
       toast(ok ? 'Backup downloaded' : 'Download is blocked here. Open the builder in a normal browser tab.');
+      if (ok) renderHome();
     });
     $('#restore-file').addEventListener('change', function (e) {
       var f = e.target.files[0];
@@ -156,14 +207,45 @@
         var cur = SP.store.all();
         incoming.forEach(function (p) { if (!cur.some(function (c) { return c.id === p.id; })) cur.push(p); });
         SP.store.replaceAll(cur);
-        toast('Restored ' + incoming.length + ' page(s)');
+        toast('Restored ' + plural(incoming.length, 'page', 'pages'));
         renderHome();
       }).catch(function () { toast('That file is not a Nonymauz backup.'); });
     });
   }
 
+  function closeMenus() { $$('.menu').forEach(function (m) { var b = m.parentNode.querySelector('[data-menu]'); if (b) b.setAttribute('aria-expanded', 'false'); m.remove(); }); }
+  document.addEventListener('click', function (e) { if (!e.target.closest('.menu')) closeMenus(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenus(); });
+  function openRowMenu(row, btn, id, name) {
+    var open = btn.getAttribute('aria-expanded') === 'true';
+    closeMenus();
+    if (open) return;
+    btn.setAttribute('aria-expanded', 'true');
+    var m = h('div', { class: 'menu', role: 'menu' });
+    var item = function (label, ic, cls, fn) { var b = h('button', { type: 'button', role: 'menuitem', class: cls || '' }, icon(ic) + esc(label)); b.addEventListener('click', fn); m.appendChild(b); return b; };
+    item('Duplicate', 'copy', '', function () {
+      var p = SP.store.get(id); p.id = SP.uid(); p.name += ' (copy)';
+      closeMenus();
+      SP.store.put(p) ? (toast('Duplicated ' + name), renderHome()) : toast('Browser storage is full.');
+    });
+    item('Delete page…', 'trash', 'danger', function (e) {
+      e.stopPropagation();
+      m.innerHTML = '<p>Delete “' + esc(name) + '”? Its sections and photos are removed from this browser.</p>';
+      var r = h('div', { class: 'row' });
+      var del = h('button', { type: 'button', class: 'btn sm danger-fill' }, 'Delete page');
+      var cancel = h('button', { type: 'button', class: 'btn sm' }, 'Cancel');
+      del.addEventListener('click', function () { SP.store.remove(id); closeMenus(); toast('Deleted ' + name); renderHome(); });
+      cancel.addEventListener('click', closeMenus);
+      r.appendChild(del); r.appendChild(cancel); m.appendChild(r);
+      cancel.focus();
+    });
+    $('.acts', row).appendChild(m);
+    $('button', m).focus();
+  }
+
+  /* The product's mark: a page with a chat tail, in the accent. */
   function logo() {
-    return '<svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="var(--brand)"/><rect x="8" y="8" width="16" height="5" rx="1.5" fill="var(--brand-ink)"/><rect x="8" y="15" width="10" height="3" rx="1.5" fill="var(--brand-ink)" opacity=".7"/><rect x="8" y="20.5" width="16" height="4" rx="2" fill="var(--sun)"/></svg>';
+    return '<svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H10l-5 3.5V18a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" fill="var(--accent)"/><path d="M7.5 7.5h9M7.5 10.75h5.5M7.5 14h7" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>';
   }
 
   /* ================= EDITOR ================= */
@@ -174,28 +256,32 @@
     app.innerHTML =
       '<div class="ed" id="ed">' +
       '<header class="ed-top">' +
-      '<a class="icon-btn" href="#" title="Back to my pages" aria-label="Back to my pages">' + icon('back') + '</a>' +
-      '<div class="ed-name"><input id="page-name" value="' + esc(page.name) + '" aria-label="Page name" maxlength="60"><span id="save-state" class="save-state">Saved</span></div>' +
+      '<a class="icon-btn" href="#" title="Back to salespages" aria-label="Back to salespages">' + icon('back') + '</a>' +
+      '<input id="page-name" class="ed-name" value="' + esc(page.name) + '" aria-label="Page name" maxlength="60">' +
+      '<span id="status-pill"></span><span id="save-state" class="save-state">Saved</span>' +
+      '<div class="ed-r">' +
       '<div class="seg ed-device" role="group" aria-label="Preview size">' +
-      '<button type="button" data-dev="desktop" class="on" title="Computer view">' + icon('desktop') + '<span>Computer</span></button>' +
-      '<button type="button" data-dev="mobile" title="Phone view">' + icon('mobile') + '<span>Phone</span></button></div>' +
-      '<div class="ed-actions">' +
+      '<button type="button" data-dev="desktop" class="on" title="Computer view" aria-label="Computer view">' + icon('desktop') + '<span>Computer</span></button>' +
+      '<button type="button" data-dev="mobile" title="Phone view" aria-label="Phone view">' + icon('mobile') + '<span>Phone</span></button></div>' +
+      '<span class="vdiv" aria-hidden="true"></span>' +
       '<button type="button" class="icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo">' + icon('undo') + '</button>' +
       '<button type="button" class="icon-btn" id="btn-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">' + icon('redo') + '</button>' +
-      '<button type="button" class="btn ghost" id="btn-preview">' + icon('eye') + '<span>Preview</span></button>' +
-      '<button type="button" class="btn primary" id="btn-publish">' + icon('download') + '<span>Publish</span></button></div></header>' +
-      '<aside class="ed-lib" id="lib" aria-label="Add a section"></aside>' +
-      '<main class="ed-canvas" id="canvas"><div class="ed-frame" id="frame"><div class="drop-line" id="drop-line" hidden></div><div id="page-root"></div></div></main>' +
+      '<span class="vdiv" aria-hidden="true"></span>' +
+      '<button type="button" class="btn" id="btn-preview" aria-label="Preview">' + icon('eye') + '<span>Preview</span></button>' +
+      '<button type="button" class="btn primary" id="btn-publish" aria-label="Publish">' + icon('download') + '<span>Publish</span></button></div></header>' +
+      '<aside class="ed-lib" id="lib" aria-label="Sections"></aside>' +
+      '<main class="ed-canvas" id="canvas"><h1 class="sr" id="ed-h1">' + esc(page.name) + '</h1><div class="ed-frame" id="frame"><div class="drop-line" id="drop-line" hidden></div><div id="page-root"></div></div></main>' +
       '<aside class="ed-insp" id="insp" aria-label="Edit"></aside>' +
       '<nav class="ed-tabs" aria-label="Panels"><button type="button" data-drawer="lib">' + icon('plus') + 'Add section</button>' +
-      '<button type="button" data-drawer="insp">' + icon('sliders') + '<span id="tab-edit-label">Page style</span></button></nav>' +
+      '<button type="button" data-drawer="insp">' + icon('sliders') + '<span id="tab-edit-label">Page settings</span></button></nav>' +
       '<div class="ed-scrim" id="scrim"></div></div>';
 
-    renderLibrary(); renderCanvas(); renderInspector(); updateUndo();
+    renderLibrary(); renderCanvas(); renderInspector(); updateUndo(); updateStatus();
 
     $('#page-name').addEventListener('input', function (e) {
       mutate('name', function () { S.page.name = e.target.value || 'Untitled page'; }, { canvas: false });
       document.title = S.page.name + ' · Nonymauz';
+      $('#ed-h1').textContent = S.page.name;
     });
     $$('.ed-device button').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -242,7 +328,7 @@
     if (opts.canvas !== false) renderCanvas();
     if (opts.insp) renderInspector();
     if (opts.lib) renderLibrary();
-    scheduleSave(); updateUndo();
+    scheduleSave(); updateUndo(); updateStatus(); refreshPreviews();
   }
   function scheduleSave() {
     var st = $('#save-state');
@@ -255,14 +341,14 @@
     if (!S.page) return;
     var ok = SP.store.put(S.page);
     var st = $('#save-state');
-    if (st) { st.textContent = ok ? 'Saved' : 'Not saved: storage full'; st.classList.toggle('err', !ok); }
+    if (st) { st.textContent = ok ? 'Saved ' + new Date().toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' }) : 'Not saved: storage full'; st.classList.toggle('err', !ok); }
     if (!ok) toast('Browser storage is full. Use smaller photos or delete old pages.');
   }
   function restore(json) {
     S.page = JSON.parse(json);
     if (S.sel && !S.page.blocks.some(function (b) { return b.id === S.sel; })) S.sel = null;
     $('#page-name').value = S.page.name;
-    renderCanvas(); renderInspector(); scheduleSave(); updateUndo();
+    renderCanvas(); renderInspector(); scheduleSave(); updateUndo(); updateStatus();
   }
   function undo() { if (!S.hist.length) return; S.fut.push(JSON.stringify(S.page)); S.lastKey = null; restore(S.hist.pop()); }
   function redo() { if (!S.fut.length) return; S.hist.push(JSON.stringify(S.page)); S.lastKey = null; restore(S.fut.pop()); }
@@ -276,11 +362,11 @@
   /* ---------- library (left) ---------- */
   function renderLibrary() {
     var lib = $('#lib');
-    lib.innerHTML = '<div class="panel-head"><h2>Add a section</h2><p>Drag onto the page, or tap to add.</p></div>' +
+    lib.innerHTML = '<div class="panel-head"><h2>Sections</h2><p>Drag onto the page, or tap to add.</p></div>' +
       SP.libraryGroups.map(function (g) {
         return '<div class="lib-group"><h3>' + esc(g.label) + '</h3><div class="lib-items">' + g.items.map(function (type) {
           var d = SP.blocks[type];
-          return '<button type="button" class="lib-item" draggable="true" data-type="' + type + '">' + icon(d.icon) + '<span><b>' + esc(d.label) + '</b><small>' + esc(d.hint) + '</small></span></button>';
+          return '<button type="button" class="lib-item" draggable="true" data-type="' + type + '" title="' + esc(d.hint) + '"><span class="tile">' + icon(d.icon) + '</span><span class="lib-l">' + esc(d.label) + '</span>' + icon('grip', 'grip') + '</button>';
         }).join('') + '</div></div>';
       }).join('');
     $$('.lib-item', lib).forEach(function (b) {
@@ -432,19 +518,20 @@
     var lab = $('#tab-edit-label');
     insp.innerHTML = '';
     var b = S.sel && S.page.blocks.find(function (x) { return x.id === S.sel; });
-    if (lab) lab.textContent = b ? 'Edit ' + SP.blocks[b.type].label.toLowerCase() : 'Page style';
+    if (lab) lab.textContent = b ? 'Edit ' + SP.blocks[b.type].label.toLowerCase() : 'Page settings';
     if (b) {
       var def = SP.blocks[b.type];
-      var head = h('div', { class: 'panel-head row' });
-      head.appendChild(h('button', { type: 'button', class: 'link-btn', onclick: function () { select(null); } }, icon('back') + 'Page style'));
-      head.appendChild(h('h2', {}, icon(def.icon) + esc(def.label)));
+      var head = h('div', { class: 'panel-head' });
+      head.appendChild(h('button', { type: 'button', class: 'link-btn', onclick: function () { select(null); } }, icon('back') + 'Page settings'));
+      head.appendChild(h('h2', {}, '<span class="tile">' + icon(def.icon) + '</span>' + esc(def.label)));
       insp.appendChild(head);
       var body = h('div', { class: 'form' });
       buildFields(def.fields, b.props, body, b.id, b.props);
       insp.appendChild(body);
+      if (b.type === 'order') { var ws = h('div', { class: 'form-sec', style: 'margin-top:24px' }); ws.appendChild(orderPreview()); insp.appendChild(ws); }
       var foot = h('div', { class: 'panel-foot' });
-      foot.appendChild(h('button', { type: 'button', class: 'btn ghost sm', onclick: function () { blockAction(b.id, 'dup'); } }, icon('copy') + 'Duplicate section'));
-      foot.appendChild(h('button', { type: 'button', class: 'btn ghost sm danger', onclick: function () { blockAction(b.id, 'del'); } }, icon('trash') + 'Delete section'));
+      foot.appendChild(h('button', { type: 'button', class: 'btn sm', onclick: function () { blockAction(b.id, 'dup'); } }, icon('copy') + 'Duplicate section'));
+      foot.appendChild(h('button', { type: 'button', class: 'btn sm danger', onclick: function () { blockAction(b.id, 'del'); } }, icon('trash') + 'Delete section'));
       insp.appendChild(foot);
     } else {
       renderPageSettings(insp);
@@ -524,8 +611,8 @@
           if (obj[f.key]) {
             box.appendChild(h('img', { src: obj[f.key], alt: '' }));
             var acts = h('div', { class: 'imgfld-acts' });
-            acts.appendChild(h('label', { class: 'btn ghost sm', for: id }, icon('upload') + 'Change'));
-            acts.appendChild(h('button', { type: 'button', class: 'btn ghost sm danger', onclick: function () { set(''); draw(); } }, icon('trash') + 'Remove'));
+            acts.appendChild(h('label', { class: 'btn sm', for: id }, icon('upload') + 'Change'));
+            acts.appendChild(h('button', { type: 'button', class: 'btn sm danger', onclick: function () { set(''); draw(); } }, icon('trash') + 'Remove'));
             box.appendChild(acts);
           } else {
             box.appendChild(h('label', { class: 'imgdrop', for: id }, icon('upload') + '<b>Upload photo</b><small>or drop a picture here</small>'));
@@ -559,7 +646,7 @@
         arr.forEach(function (item, i) {
           var card = h('details', { class: 'list-item' });
           var title = f.titleKey ? (item[f.titleKey] || f.itemLabel) : (f.itemLabel + ' ' + (i + 1));
-          var sum = h('summary', {}, '<span class="li-n">' + (i + 1) + '</span><span class="li-t">' + esc(String(title).replace(/\*\*/g, '').slice(0, 40)) + '</span>');
+          var sum = h('summary', {}, '<span class="li-t">' + esc(String(title).replace(/\*\*/g, '').slice(0, 40)) + '</span>');
           var tools = h('span', { class: 'li-tools' });
           var mk = function (ic, lab, dis, fn) {
             var b = h('button', { type: 'button', title: lab, 'aria-label': lab, disabled: dis }, icon(ic));
@@ -586,7 +673,7 @@
           list.appendChild(card);
         });
         wrap.appendChild(list);
-        var add = h('button', { type: 'button', class: 'btn dashed' }, icon('plus') + esc(f.addLabel || 'Add'));
+        var add = h('button', { type: 'button', class: 'btn add' }, icon('plus') + esc(f.addLabel || 'Add'));
         add.addEventListener('click', function () {
           mutate(null, function () { arr.push(f.newItem ? f.newItem() : {}); }, { insp: true });
           openItems[key + '.' + (arr.length - 1)] = true;
@@ -609,11 +696,12 @@
   /* ---------- page settings (right, nothing selected) ---------- */
   function renderPageSettings(insp) {
     var p = S.page, t = p.theme, s = p.settings, F = SP.F;
-    insp.appendChild(h('div', { class: 'panel-head' }, '<h2>' + icon('sliders') + 'Page style</h2><p>Tap any section on the page to edit its words, photos and prices.</p>'));
+    insp.appendChild(h('div', { class: 'panel-head' }, '<h2>Page settings</h2><p>Tap any section on the page to edit its words, photos and prices.</p>'));
     var form = h('div', { class: 'form' });
 
     /* colour presets */
     var sec = function (title) { var d = h('div', { class: 'form-sec' }); d.appendChild(h('h3', {}, esc(title))); form.appendChild(d); return d; };
+    var biz = sec('Orders');
     var look = sec('Colours');
     var sw = h('div', { class: 'swatches', role: 'radiogroup', 'aria-label': 'Colour theme' });
     Object.keys(SP.themes).forEach(function (k) {
@@ -648,9 +736,9 @@
     typo.appendChild(fonts);
     typo.appendChild(fieldEl(F.seg('corners', 'Corners', Object.keys(SP.corners).map(function (k) { return [k, SP.corners[k].label]; })), t, 'theme.corners', t));
 
-    var biz = sec('Business & orders');
     biz.appendChild(fieldEl(F.text('businessName', 'Business name', { hint: 'Shown in the WhatsApp order message.' }), s, 'settings.businessName', s));
     biz.appendChild(fieldEl(F.text('whatsapp', 'WhatsApp number for orders', { hint: 'E.g. 012-345 6789. Orders from your page go to this number.' }), s, 'settings.whatsapp', s));
+    biz.appendChild(orderPreview());
     biz.appendChild(fieldEl(F.seg('lang', 'Page language', [['ms', 'Bahasa Melayu'], ['en', 'English']], { hint: 'For buttons and labels like "Jumlah" or "Total".' }), s, 'settings.lang', s));
 
     var extra = sec('Helpful extras');
@@ -666,14 +754,58 @@
     insp.appendChild(form);
   }
 
+  /* ---------- signature: the WhatsApp message a customer will send ---------- */
+  function orderMessage(p) {
+    var s = p.settings, L = SP.L[s.lang] || SP.L.ms;
+    var ob = p.blocks.find(function (b) { return b.type === 'order'; });
+    if (!ob || !ob.props.items.length) return null;
+    var o = ob.props, it = o.items[0], ship = (o.shipping || [])[0];
+    var sub = Number(it.price) || 0, fee = ship ? Number(ship.fee) || 0 : 0;
+    if (Number(o.freeShipMin) > 0 && sub >= Number(o.freeShipMin)) fee = 0;
+    var lines = [L.orderIntro + (s.businessName ? ' (' + s.businessName + ')' : '') + ':', '', '• 1 x ' + it.name + ' = ' + SP.money(sub)];
+    if (ship) lines.push((o.shipLabel || 'Penghantaran') + ': ' + ship.label + ' (' + (fee ? SP.money(fee) : L.free) + ')');
+    lines.push('*' + L.total + ': ' + SP.money(sub + fee) + '*', '', L.name + ': …', L.phone + ': …');
+    if (o.askAddress) lines.push(L.address + ': …');
+    return lines.join('\n');
+  }
+  function orderPreview() {
+    var box = h('div', { class: 'wa-prev', 'data-wa-prev': '' });
+    fillPreview(box);
+    return box;
+  }
+  function fillPreview(box) {
+    var p = S.page, msg = orderMessage(p), wa = SP.waNumber(p.settings.whatsapp);
+    box.innerHTML = '';
+    if (!msg) { box.innerHTML = '<p class="fld-hint">Add an order form section and customers can order straight to your WhatsApp.</p>'; return; }
+    var hd = h('div', { class: 'wa-prev-h' }, '<b>What customers send you</b>' + (wa ? '<span class="wa-to num">to ' + esc(fmtPhone(wa)) + '</span>' : '<span class="pill warn">No WhatsApp number</span>'));
+    box.appendChild(hd);
+    var pre = h('pre', { class: 'wa-msg' }); pre.textContent = msg; box.appendChild(pre);
+    box.appendChild(h('p', { class: 'fld-hint' }, 'Example with one ' + esc(p.blocks.find(function (b) { return b.type === 'order'; }).props.items[0].name) + '. Each customer’s own choices fill in when they order.'));
+  }
+  function refreshPreviews() { $$('[data-wa-prev]').forEach(fillPreview); }
+
+  /* ---------- status in the top bar: can this page take orders? ---------- */
+  function updateStatus() {
+    var el = $('#status-pill');
+    if (!el || !S.page) return;
+    var f = pageFacts(S.page);
+    if (f.status.cls === 'warn') {
+      el.innerHTML = '<button type="button" class="pill warn" title="Add your WhatsApp number">' + f.status.text + '</button>';
+      $('button', el).addEventListener('click', function () {
+        select(null); setDrawer('insp');
+        var w = $('#fld-settings-whatsapp'); if (w) { w.focus(); w.scrollIntoView({ block: 'center' }); }
+      });
+    } else el.innerHTML = '<span class="pill ' + f.status.cls + '">' + f.status.text + '</span>';
+  }
+
   /* ================= PREVIEW ================= */
   function openPreview() {
     saveNow();
     var dev = S.device;
     var ov = h('div', { class: 'overlay preview', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Preview' });
-    ov.innerHTML = '<div class="ov-bar"><b>Preview</b><span class="ov-note">This is what customers see. Try the order form.</span>' +
+    ov.innerHTML = '<div class="ov-bar"><h2>Preview</h2><span class="ov-note">This is what customers see. Try the order form.</span>' +
       '<div class="seg"><button type="button" data-dev="desktop">' + icon('desktop') + '<span>Computer</span></button><button type="button" data-dev="mobile">' + icon('mobile') + '<span>Phone</span></button></div>' +
-      '<button type="button" class="btn primary" data-close>' + icon('close') + 'Back to editing</button></div>' +
+      '<button type="button" class="btn primary" data-close>Back to editing</button></div>' +
       '<div class="ov-body"><div class="pv-frame" id="pv-frame">' + pageFrame(S.page, { preview: true, lang: S.page.settings.lang, settings: S.page.settings }) + '</div></div>';
     document.body.appendChild(ov);
     var setDev = function (d) {
@@ -704,15 +836,15 @@
     saveNow();
     var p = S.page, s = p.settings;
     var warn = [];
-    if (!SP.waNumber(s.whatsapp) && p.blocks.some(function (b) { return b.type === 'order'; })) warn.push('Add your <b>WhatsApp number</b> in Page style, or orders will have nowhere to go.');
+    if (!SP.waNumber(s.whatsapp) && p.blocks.some(function (b) { return b.type === 'order'; })) warn.push('Add your <b>WhatsApp number</b> in Page settings, or orders will have nowhere to go.');
     if (p.blocks.some(function (b) { return b.type === 'hero' && !b.props.image; })) warn.push('Your headline has no photo yet. Pages with a real product photo sell better.');
     var file = SP.slug(p.name) + '.html';
     var ov = h('div', { class: 'overlay modal-wrap', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'pub-title' });
     ov.innerHTML = '<div class="modal">' +
       '<div class="modal-head"><h2 id="pub-title">Put your page online</h2><button type="button" class="icon-btn" data-close aria-label="Close">' + icon('close') + '</button></div>' +
-      (warn.length ? '<div class="warn">' + warn.map(function (w) { return '<p>' + w + '</p>'; }).join('') + '</div>' : '') +
+      (warn.length ? '<div class="notice" role="note">' + warn.map(function (w) { return '<p>' + w + '</p>'; }).join('') + '</div>' : '') +
       '<ol class="pub-steps">' +
-      '<li><b>Download your page.</b> It is one file, <code>' + esc(file) + '</code>, with everything inside.<div class="pub-acts"><button type="button" class="btn primary" id="pub-dl">' + icon('download') + 'Download page</button><button type="button" class="btn ghost" id="pub-copy">' + icon('copy') + 'Copy HTML code</button></div></li>' +
+      '<li><b>Download your page.</b> It is one file, <code>' + esc(file) + '</code>, with everything inside.<div class="pub-acts"><button type="button" class="btn primary" id="pub-dl">' + icon('download') + 'Download page</button><button type="button" class="btn" id="pub-copy">' + icon('copy') + 'Copy HTML code</button></div></li>' +
       '<li><b>Upload it to free hosting.</b> The easiest: open <span class="url">app.netlify.com/drop</span> and drag the file in. You get a link in seconds.</li>' +
       '<li><b>Share the link</b> in your WhatsApp status, Facebook, TikTok bio and ads.</li></ol>' +
       '<p class="fine">Already have a website or cPanel? Upload the file there and rename it to <code>index.html</code>. Every time you change your page, download and upload it again.</p>' +

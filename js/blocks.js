@@ -40,6 +40,7 @@
     chat: '<path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20.5l1.6-5.2A8.5 8.5 0 1 1 21 11.5z"/>',
     upload: '<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>',
     check: '<path d="M20 6L9 17l-5-5"/>',
+    more: '<path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3"/>',
     file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>'
   };
   SP.icon = function (name, cls) {
@@ -115,7 +116,7 @@
       render: function (p, c) {
         return '<div class="sp-hero sp-al-' + esc(p.align) + '">' +
           (p.eyebrow ? '<div class="sp-eyebrow">' + esc(p.eyebrow) + '</div>' : '') +
-          '<h1 class="sp-h1">' + rich(p.headline) + '</h1>' +
+          (c.editor || c.thumb ? '<h2 class="sp-h1">' + rich(p.headline) + '</h2>' : '<h1 class="sp-h1">' + rich(p.headline) + '</h1>') +
           (p.sub ? '<p class="sp-lead">' + rich(p.sub) + '</p>' : '') +
           img(p.image, c, 'sp-hero-img', p.headline) + btn(p.btnText, p.btnLink) + '</div>';
       }

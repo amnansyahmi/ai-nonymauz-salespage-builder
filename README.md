@@ -27,6 +27,18 @@ To host the builder itself, upload the whole folder to any static host (Netlify,
 
 Pages are saved automatically in the browser (localStorage). Photos are shrunk to 1200px before saving.
 
+## Interface design
+
+The builder's interface follows the [taste-skill](https://github.com/Leonxlnx/taste-skill) app rules, style **Framed sheet**
+(sheet saved in `.taste-skill/app/direction.json`):
+
+- a pale pandan green-grey frame, the work on white sheets, 1px edges, no shadows on anything at rest
+- one typeface (IBM Plex Sans) and a near-black primary button; colour is kept for status and the seller's own page
+- the home screen answers "which of my pages can take orders?", showing each page's prices, WhatsApp number and status
+- beside the order form and WhatsApp settings, a live preview of the exact message customers will send
+
+Check changes with the skill's `inspect.mjs --app` and `lint.mjs --app`.
+
 ## Project layout
 
 ```

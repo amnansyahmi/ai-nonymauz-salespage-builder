@@ -34,12 +34,17 @@ window.SP = window.SP || {};
     if (isNaN(n)) return [0, 0, 0];
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
-  SP.onColor = function (hex) {
+  function lum(hex) {
     var c = hexToRgb(hex).map(function (v) {
       v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
     });
-    var L = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-    return L > 0.42 ? '#141414' : '#ffffff';
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  /* Pick the text colour (white or near-black) with the higher contrast on this background. */
+  SP.onColor = function (hex) {
+    var L = lum(hex);
+    var withWhite = 1.05 / (L + 0.05), withInk = (L + 0.05) / (lum('#141414') + 0.05);
+    return withWhite >= withInk ? '#ffffff' : '#141414';
   };
 
   /* Colour presets, named after things Malaysian sellers already know. */

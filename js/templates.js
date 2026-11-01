@@ -49,7 +49,7 @@
       id: 'digital', name: 'Ebook, course or class', desc: 'Digital products and workshops. Price box, bonuses and a money-back promise.',
       build: function () {
         return page('Kelas Jualan Online', 'laut', 'moden', 'soft', { businessName: 'Akademi Niaga Kecil', stickyText: 'Daftar sekarang · RM39' }, [
-          B('hero', { eyebrow: 'Ebook + 5 video ringkas', headline: 'Dapatkan **30 order pertama** anda dari Facebook & TikTok', sub: 'Panduan langkah demi langkah untuk peniaga kecil yang baru bermula. Tiada bajet iklan besar diperlukan.', btnText: 'Saya nak belajar', bg: 'default' }),
+          B('hero', { eyebrow: 'Ebook + 5 video ringkas', headline: '**30 order pertama** dari TikTok & Facebook', sub: 'Panduan langkah demi langkah untuk peniaga kecil yang baru bermula. Tiada bajet iklan besar diperlukan.', btnText: 'Saya nak belajar', bg: 'default' }),
           B('video', { heading: '', url: '', caption: 'Tonton video pengenalan 2 minit', bg: 'default' }),
           B('benefits', { heading: 'Apa yang anda akan belajar', style: 'number', items: [{ text: 'Cara pilih produk yang orang **memang cari**' }, { text: 'Tulis caption yang buat orang terus DM' }, { text: 'Susun posting 30 hari tanpa pening kepala' }, { text: 'Tutup jualan di WhatsApp dengan skrip sedia ada' }], bg: 'soft' }),
           B('bonus', { heading: '3 bonus **percuma** hari ini', items: [
