@@ -17,6 +17,7 @@ import {
 import { shrinkImage, store, storageOwner } from "@/lib/store";
 import { StudioModal } from "./StudioDialogs";
 import { Icon, useToast } from "./ui";
+import { AiDraft } from "./AiDraft";
 
 /** Applies a change to a draft copy of the page. `key` groups fast typing into one undo step. */
 export type Mutate = (key: string | null, fn: (draft: Page) => void) => void;
@@ -818,6 +819,12 @@ export function PageSettings({ page, mutate }: { page: Page; mutate: Mutate }) {
             })}
             {s.sticky &&
               sF({ type: "text", key: "stickyText", label: "Button text" })}
+            {sF({
+              type: "toggle",
+              key: "captureOrders",
+              label: "Save orders in my Orders list",
+              hint: "Buyers tick a box to agree before their name and phone are saved. Without it, the order still reaches you on WhatsApp.",
+            })}
           </>,
         )}
         {sec(
@@ -880,6 +887,7 @@ export function BlockPanel({
         </h2>
       </div>
       <div className="form">
+        {b.type === "hero" && <AiDraft page={page} blockId={b.id} mutate={mutate} />}
         <FieldList
           fields={def.fields}
           values={b.props}

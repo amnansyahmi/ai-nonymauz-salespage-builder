@@ -27,6 +27,8 @@ export interface Settings {
   pixelId: string;
   spacing?: "compact" | "comfortable";
   reviewsConfirmed?: boolean;
+  /** Keep buyer details in Orders when the buyer agrees. On unless the seller turns it off. */
+  captureOrders?: boolean;
 }
 
 /* Block props are plain JSON, edited through the field schema. */

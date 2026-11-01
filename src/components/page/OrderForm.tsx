@@ -43,6 +43,12 @@ export default function OrderForm({
   const [err, setErr] = useState("");
   const [demo, setDemo] = useState("");
   const [busy, setBusy] = useState(false);
+  // PDPA: buyer details are saved only after the buyer opts in. Never pre-ticked.
+  const [consent, setConsent] = useState(false);
+  const saves = !!ctx.slug && ctx.settings.captureOrders !== false;
+  const shop =
+    ctx.settings.businessName ||
+    (ctx.lang === "en" ? "this shop" : "kedai ini");
   const wa = waNumber(ctx.settings.whatsapp);
 
   const requestId = useRef<{ id: string; payload: string } | null>(null);
@@ -136,7 +142,7 @@ export default function OrderForm({
     if (requestId.current?.payload !== payload)
       requestId.current = { id: crypto.randomUUID(), payload };
     setBusy(true);
-    if (ctx.slug) {
+    if (saves && consent) {
       // Record the order for the seller's order list; never block the buyer on it.
       try {
         await Promise.race([
@@ -153,6 +159,7 @@ export default function OrderForm({
                 ...form,
                 variant,
                 address: chosen?.pickup ? "" : form.address,
+                consent: true,
               },
             }),
             keepalive: true,
@@ -378,11 +385,26 @@ export default function OrderForm({
         </div>
       </div>
 
-      {ctx.slug && (
+      {(saves || ctx.editor) && ctx.settings.captureOrders !== false && (
+        <label className="sp-consent sp-capture-note" htmlFor={fid("consent")}>
+          <input
+            id={fid("consent")}
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+          />
+          <span>
+            {ctx.lang === "en"
+              ? `Save my name, phone and order details with ${shop} so they can follow up. Optional; your order is sent on WhatsApp either way.`
+              : `Simpan nama, telefon dan butiran tempahan saya dengan ${shop} untuk susulan. Pilihan; tempahan tetap dihantar melalui WhatsApp.`}
+          </span>
+        </label>
+      )}
+      {!p.payNote && (
         <p className="sp-capture-note">
           {ctx.lang === "en"
-            ? "Your details are sent to this shop to handle your enquiry. WhatsApp opens next; payment and availability are confirmed by the seller."
-            : "Maklumat anda dihantar kepada kedai untuk urusan tempahan. WhatsApp akan dibuka; bayaran dan stok disahkan oleh penjual."}
+            ? "WhatsApp opens next. Payment and availability are confirmed by the seller."
+            : "WhatsApp akan dibuka. Bayaran dan stok disahkan oleh penjual."}
         </p>
       )}
       {err && (

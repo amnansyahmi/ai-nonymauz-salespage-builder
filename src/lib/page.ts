@@ -43,6 +43,7 @@ export function normalizePage(p: Partial<Page> & Record<string, any>): Page {
   settings.spacing = settings.spacing === "compact" ? "compact" : "comfortable";
   for (const key of ["waFloat", "sticky", "reviewsConfirmed"] as const)
     settings[key] = !!settings[key];
+  settings.captureOrders = settings.captureOrders !== false;
   const ids = new Set<string>(),
     anchors = new Set<string>();
   const blocks = (Array.isArray(p.blocks) ? p.blocks.slice(0, 100) : [])

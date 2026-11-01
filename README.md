@@ -37,6 +37,17 @@ Without Supabase keys the app runs in **demo mode**: pages are saved in the brow
 
 Before deploying this branch, run [`supabase/migrations/20261101_seller_studio.sql`](supabase/migrations/20261101_seller_studio.sql) in the Supabase SQL Editor. New projects can run `supabase/schema.sql` once; it already includes this migration. The migration is safe to rerun and keeps existing pages, accounts, photos, and orders. It adds release history, daily activity, offline publication state, and validated publishing/checkout RPCs. The application uses the existing two public Supabase environment variables; it does not require a service-role key.
 
+Then run [`supabase/migrations/20261102_consent_ai_drafts.sql`](supabase/migrations/20261102_consent_ai_drafts.sql). It makes checkout save buyer details only when the buyer ticks the consent box (PDPA), lets a seller turn saved orders off (**Page settings → Helpful extras → Save orders in my Orders list**), and adds the hourly allowance for AI drafts. `schema.sql` already includes it.
+
+## AI copy drafts (optional)
+
+Sellers can press **Draft with AI** in the Headline section to get a headline, supporting sentence and up to three benefits written from facts they type. Nothing changes on the page until they press **Use this**, and Undo brings the old text back. The panel only appears when the server has a key:
+
+- `ANTHROPIC_API_KEY`: an Anthropic API key (Vercel → Settings → Environment Variables; server-only, never `NEXT_PUBLIC_`).
+- `AI_COPY_MODEL` (optional): defaults to `claude-opus-5-5`.
+
+Drafts need a signed-in seller (Supabase), and each seller can make 10 drafts an hour. The prompt tells the model to use only the seller's facts and not to invent halal status, reviews, guarantees, prices or health claims, but sellers should still check every claim before publishing.
+
 ## Develop
 
 ```bash

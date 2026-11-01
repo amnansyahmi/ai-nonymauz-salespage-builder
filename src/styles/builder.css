@@ -432,3 +432,15 @@ button.pill:hover { filter: brightness(.97); }
 .login-err { margin: 0; color: var(--negative); font-weight: 500; }
 .login-sent { margin: 0; }
 @media (max-width: 1100px) { .ptable .c-live { display: none; } }
+
+/* ---------- AI copy draft (headline section) ---------- */
+.ai-draft { display: flex; flex-direction: column; gap: 12px; width: 100%; padding-bottom: 24px; border-bottom: 1px solid var(--rule); }
+.ai-draft > .btn { align-self: flex-start; }
+.ai-draft-h { display: flex; flex-direction: column; gap: 4px; }
+.ai-draft-h b { font-weight: 500; }
+.ai-err { color: var(--negative); }
+.ai-out { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: var(--radius-card); background: var(--raised); }
+.ai-out b { font-weight: 600; line-height: 20px; }
+.ai-out p, .ai-out ul { margin: 0; }
+.ai-out ul { padding-left: 18px; }
+.ai-row { display: flex; gap: 8px; flex-wrap: wrap; }

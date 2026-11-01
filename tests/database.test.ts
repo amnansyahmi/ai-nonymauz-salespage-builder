@@ -37,6 +37,7 @@ test("Supabase migration: atomic publication, RLS, catalog pricing, offline rete
     phone: "0123456789",
     address: "Test address",
     variant: "Extra spicy",
+    consent: true,
   };
   async function asUser(id: string) {
     await db.exec("reset role;set role authenticated;");
@@ -80,6 +81,9 @@ test("Supabase migration: atomic publication, RLS, catalog pricing, offline rete
       readFileSync("supabase/migrations/20261101_seller_studio.sql", "utf8"),
     ); // rerun is safe
     await db.exec(
+      readFileSync("supabase/migrations/20261102_consent_ai_drafts.sql", "utf8"),
+    );
+    await db.exec(
       "grant usage on schema public,auth,storage to anon,authenticated;grant select,insert,update,delete on public.pages,public.published_pages,public.orders to anon,authenticated;",
     );
     await db.query("insert into auth.users(id) values($1),($2)", [
@@ -121,6 +125,14 @@ test("Supabase migration: atomic publication, RLS, catalog pricing, offline rete
     await admin();
     await db.exec("set role anon;");
     await db.query("select set_config('request.jwt.claim.sub','',false)");
+    await assert.rejects(
+      order([2, 0], 0, { ...customer, consent: false }, "99999999-9999-4999-8999-999999999999"),
+      /consent/,
+    );
+    await assert.rejects(
+      order([2, 0], 0, { ...customer, consent: undefined }, "99999999-9999-4999-8999-999999999998"),
+      /consent/,
+    );
     const first = (await order([2, 0])).rows[0].id;
     assert.equal((await order([2, 0])).rows[0].id, first); // idempotent retry
     await assert.rejects(
@@ -219,6 +231,34 @@ test("Supabase migration: atomic publication, RLS, catalog pricing, offline rete
     await assert.rejects(
       publish(pageId, "Rename", "different-link"),
       /must stay the same/,
+    );
+    // A shop that turned off saved orders never stores buyer details, even with consent.
+    await admin();
+    await db.exec(
+      "update public.published_pages set data=jsonb_set(data,'{settings,captureOrders}','false') where slug='test-shop'",
+    );
+    await db.exec("set role anon;");
+    await db.query("select set_config('request.jwt.claim.sub','',false)");
+    await assert.rejects(
+      order([1, 0], 1, customer, "12121212-1212-4212-8212-121212121212"),
+      /does not save orders/,
+    );
+    // AI drafts: anonymous visitors cannot claim; each seller gets a fixed hourly allowance.
+    await assert.rejects(
+      db.query("select public.claim_ai_draft(10)"),
+      /permission denied/,
+    );
+    await asUser(owner);
+    const claims: boolean[] = [];
+    for (let i = 0; i < 4; i++)
+      claims.push(
+        (await db.query<{ ok: boolean }>("select public.claim_ai_draft(3) as ok"))
+          .rows[0].ok,
+      );
+    assert.deepEqual(claims, [true, true, true, false]);
+    await assert.rejects(
+      db.query("select * from public.ai_drafts"),
+      /permission denied/,
     );
   } finally {
     await db.close();
