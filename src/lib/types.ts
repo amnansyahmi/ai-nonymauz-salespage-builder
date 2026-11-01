@@ -1,6 +1,6 @@
-export type Lang = 'ms' | 'en';
-export type LookId = 'classic' | 'label' | 'chapters' | 'unit' | 'stage';
-export type Bg = 'default' | 'soft' | 'primary' | 'dark';
+export type Lang = "ms" | "en";
+export type LookId = "classic" | "label" | "chapters" | "unit" | "stage";
+export type Bg = "default" | "soft" | "primary" | "dark";
 
 export interface Theme {
   preset: string;
@@ -10,7 +10,7 @@ export interface Theme {
   text: string;
   alt: string;
   font: string;
-  corners: 'sharp' | 'soft' | 'round';
+  corners: "sharp" | "soft" | "round";
   look: LookId;
 }
 
@@ -25,6 +25,8 @@ export interface Settings {
   seoTitle: string;
   seoDesc: string;
   pixelId: string;
+  spacing?: "compact" | "comfortable";
+  reviewsConfirmed?: boolean;
 }
 
 /* Block props are plain JSON, edited through the field schema. */
@@ -34,11 +36,28 @@ export interface Block {
   id: string;
   type: BlockType;
   props: Props;
+  hidden?: boolean;
+  anchor?: string;
+  spacing?: "compact" | "comfortable" | "generous" | "";
 }
 
 export type BlockType =
-  | 'hero' | 'text' | 'image' | 'gallery' | 'video' | 'benefits' | 'order' | 'pricing'
-  | 'bonus' | 'testimonials' | 'faq' | 'countdown' | 'guarantee' | 'cta' | 'spacer' | 'footer';
+  | "hero"
+  | "text"
+  | "image"
+  | "gallery"
+  | "video"
+  | "benefits"
+  | "order"
+  | "pricing"
+  | "bonus"
+  | "testimonials"
+  | "faq"
+  | "countdown"
+  | "guarantee"
+  | "cta"
+  | "spacer"
+  | "footer";
 
 export interface Page {
   id: string;

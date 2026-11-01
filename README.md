@@ -14,6 +14,10 @@ A salespage builder for Malaysian small businesses. Sellers pick a template, edi
 - **Accounts:** email login link or Google. Each seller only ever sees their own pages and orders (row-level security).
 - Facebook Pixel (PageView + Lead) and share titles/descriptions per page.
 
+The seller studio adds a guided setup with your own business details, a navigable section outline with hide/show controls, collapsible settings, reusable brand colours and photos, image composition/crop controls, compact spacing, and a launch checklist. Local IndexedDB recovery keeps recent draft versions and deduplicates photos. Backup restore offers copy, replace, and skip modes.
+
+Publishing is atomic and retains a stable public address. Taking a page offline keeps recorded enquiries. You can roll the live page back to a recent release without overwriting your draft. Checkout validates prices against the published catalog in Postgres, supports pickup, variants, and preferred appointments, and deduplicates retries. Activity counts show visits and CTA/WhatsApp clicks; these are approximate counters, not confirmed messages, payments, or unique buyers.
+
 Without Supabase keys the app runs in **demo mode**: pages are saved in the browser, publishing is off. Useful for local work.
 
 ## Set up (one time, about 10 minutes)
@@ -29,12 +33,18 @@ Without Supabase keys the app runs in **demo mode**: pages are saved in the brow
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 5. Redeploy.
 
+## Upgrade an existing Supabase project
+
+Before deploying this branch, run [`supabase/migrations/20261101_seller_studio.sql`](supabase/migrations/20261101_seller_studio.sql) in the Supabase SQL Editor. New projects can run `supabase/schema.sql` once; it already includes this migration. The migration is safe to rerun and keeps existing pages, accounts, photos, and orders. It adds release history, daily activity, offline publication state, and validated publishing/checkout RPCs. The application uses the existing two public Supabase environment variables; it does not require a service-role key.
+
 ## Develop
 
 ```bash
 npm install
 cp .env.example .env.local   # fill in the two keys, or leave empty for demo mode
 npm run dev                  # http://localhost:3000
+npm test                     # unit, IndexedDB and real PostgreSQL/RLS checks (PGlite)
+npm run typecheck
 npm run build && npm start   # production build
 ```
 
@@ -56,3 +66,5 @@ legacy/                 the first static version, kept for reference
 ### Add a section type
 
 Add an entry to `BLOCKS` in `src/lib/blocks.ts` (label, icon, defaults, fields) and its markup to `BlockBody` in `src/components/page/SalesPage.tsx`. The edit form is generated from `fields`.
+
+Local verification covers demo browser storage and an isolated PostgreSQL engine. Production login, storage permissions, and email delivery still need a smoke test against your configured Supabase project after applying the migration. Appointment times use Malaysia time on the database.

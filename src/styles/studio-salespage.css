@@ -1,0 +1,166 @@
+.sp-sec {
+  scroll-margin-top: 24px;
+}
+.sp-hero-img,
+.sp-photo {
+  object-position: var(--focus-x, 50%) var(--focus-y, 50%);
+}
+.sp-hero-img {
+  object-fit: var(--image-fit, cover);
+}
+.sp-hero.arrangement-image-first > .sp-hero-copy {
+  order: 2;
+}
+.sp-hero.arrangement-stacked {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sp-hero.arrangement-stacked > .sp-hero-img {
+  max-height: 500px;
+  aspect-ratio: 16/9;
+}
+.sp-hero.arrangement-stacked > .sp-hero-copy {
+  display: flex;
+}
+.density-compact .sp-sec {
+  padding-block: clamp(36px, 6cqi, 72px);
+}
+.sp-sec.spacing-compact {
+  padding-block: 32px;
+}
+.sp-sec.spacing-comfortable {
+  padding-block: 64px;
+}
+.sp-sec.spacing-generous {
+  padding-block: 112px;
+}
+.sp-b-spacer {
+  padding-block: 0 !important;
+}
+.sp-field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--fbg);
+  color: var(--ftx);
+  border-radius: 6px;
+  min-height: 48px;
+  font: inherit;
+  padding: 10px 12px;
+}
+.sp-field input[type="date"],
+.sp-field input[type="time"] {
+  min-width: 0;
+  max-width: 100%;
+}
+.sp-capture-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mut);
+}
+.sp-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.sp-consent input {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+@container sppage (max-width:600px) {
+  .sp-b-hero {
+    padding: 28px 20px 36px;
+  }
+  .sp-hero {
+    gap: 22px;
+  }
+  .sp-hero-copy {
+    gap: 16px;
+  }
+  .sp-h1 {
+    font-size: clamp(2rem, 9.5cqi, 3.4rem);
+  }
+  .sp-lead {
+    font-size: 17px;
+  }
+  .sp-hero-img {
+    aspect-ratio: 4/3;
+    max-height: 300px;
+  }
+  .sp-hero .sp-btn {
+    min-height: 48px;
+    font-size: 16px;
+    padding: 14px 22px;
+  }
+  .sp-fact {
+    font-size: 12px;
+  }
+  .look-label .sp-b-hero {
+    padding: 26px 20px 30px;
+  }
+  .look-label .sp-hero {
+    gap: 24px;
+  }
+  .look-label .sp-hero-copy {
+    padding: 22px 20px;
+    gap: 14px;
+    transform: rotate(-0.7deg);
+  }
+  .look-label .sp-hero-copy .sp-h1 {
+    font-size: clamp(2rem, 9cqi, 3rem);
+  }
+  .look-label .sp-label-brand {
+    font-size: 14px;
+    padding-bottom: 12px;
+    border-bottom-width: 3px;
+  }
+  .look-label .sp-hero-copy .sp-lead {
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  .look-label .sp-hero-copy .sp-fact {
+    padding-top: 12px;
+    border-top-width: 3px;
+    font-size: 12px;
+  }
+  .look-label .sp-jar {
+    width: 150px;
+    max-height: 230px;
+  }
+  .look-label .sp-hero-img {
+    width: 100%;
+    max-height: 260px;
+    aspect-ratio: 4/3;
+    transform: none;
+  }
+  .look-stage .sp-stage-media {
+    max-height: 330px;
+    min-height: 220px;
+  }
+  .look-stage .sp-stage-media img {
+    height: 330px;
+    object-fit: var(--image-fit, cover);
+  }
+  .look-stage .sp-stage-field {
+    min-height: 220px;
+    padding: 28px;
+  }
+  .look-stage .sp-stage-field > span {
+    font-size: 36px;
+  }
+  .look-chapters .sp-b-hero {
+    padding-top: 36px;
+    padding-bottom: 36px;
+  }
+  .sp-qty button {
+    min-width: 40px;
+    min-height: 44px;
+  }
+  .sp-sec.spacing-generous {
+    padding-block: 72px;
+  }
+}
+.sp-stage-media img {
+  object-position: var(--focus-x, 50%) var(--focus-y, 50%);
+  object-fit: var(--image-fit, cover);
+}
