@@ -11,7 +11,7 @@ export interface Template { id: string; name: string; desc: string }
 export const TEMPLATES: Template[] = (data as any[]).map(({ id, name, desc }) => ({ id, name, desc }));
 
 export const DEFAULT_SETTINGS: Settings = {
-  businessName: '', whatsapp: '', lang: 'ms', waFloat: true, sticky: false, stickyText: 'Order sekarang', stickyLink: '#order', seoTitle: '', seoDesc: '', pixelId: '',
+  businessName: '', whatsapp: '', lang: 'ms', waFloat: true, sticky: false, stickyText: 'Order sekarang', stickyLink: '#order', seoTitle: '', seoDesc: '', pixelId: '', captureOrders: true,
 };
 
 function inDays(d: number): string {

@@ -36,6 +36,12 @@ export async function POST(req: Request) {
       { ok: false, error: "invalid checkout" },
       { status: 400 },
     );
+  // PDPA: buyer details are stored only with an explicit opt-in (the RPC checks this too).
+  if (b.customer?.consent !== true)
+    return NextResponse.json(
+      { ok: false, error: "consent required" },
+      { status: 400 },
+    );
   const { data, error } = await supabasePublic().rpc("place_order", {
     p_slug: b.slug,
     p_form_id: b.formId,
