@@ -1,11 +1,12 @@
 "use client";
-/* One interface for the builder's data. Cloud mode uses Supabase; demo mode keeps pages in this browser. */
+/* One interface for the builder's data. Cloud mode uses Neon through server functions; demo mode keeps pages in this browser. */
 import { localPages } from "./local-pages";
 import type { Page } from "./types";
 import { normalizePage } from "./page";
 import { clone, uid, validWhatsApp } from "./format";
-import { hasSupabase } from "./supabase/env";
-import { supabaseBrowser } from "./supabase/client";
+import { hasCloud } from "./cloud";
+/* Loaded only in cloud mode; in the browser these are calls to the server functions in app/actions/studio. */
+const server = () => import("@/app/actions/studio");
 
 export interface Order {
   id: string;
@@ -66,7 +67,7 @@ const demoStore: Store = {
     return {
       ok: false,
       error:
-        "Publishing needs the online version. Ask your admin to connect Supabase.",
+        "Publishing needs the online version. Ask your admin to connect the Neon database.",
     };
   },
   async unpublish() {
@@ -85,7 +86,7 @@ const demoStore: Store = {
   },
 };
 
-/* ---------------- cloud mode: Supabase ---------------- */
+/* ---------------- cloud mode: Neon, through server functions ---------------- */
 const SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?$/;
 const RESERVED = new Set([
   "dashboard",
@@ -103,6 +104,18 @@ const RESERVED = new Set([
   "favicon.ico",
 ]);
 
+/** Unwraps a server function's answer, turning a refusal into an error the seller can read. */
+async function call<T>(p: Promise<{ ok: true; data: T } | { ok: false; error: string }>): Promise<T> {
+  let r;
+  try {
+    r = await p;
+  } catch {
+    throw new Error("Could not reach the server. Check your connection and try again.");
+  }
+  if (!r.ok) throw new Error(r.error);
+  return r.data;
+}
+
 function fromRow(r: any): Page {
   return normalizePage({
     ...r.data,
@@ -110,7 +123,7 @@ function fromRow(r: any): Page {
     name: r.name,
     slug: r.slug,
     published: r.published,
-    publishedAt: r.published_at,
+    publishedAt: r.published_at ? new Date(r.published_at).toISOString() : null,
     updatedAt: new Date(r.updated_at).getTime(),
   });
 }
@@ -123,50 +136,20 @@ const toData = (p: Page) => ({
 const cloudStore: Store = {
   mode: "cloud",
   async list() {
-    const { data, error } = await supabaseBrowser()
-      .from("pages")
-      .select("*")
-      .order("updated_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data || []).map(fromRow);
+    return (await call((await server()).listPages())).map(fromRow);
   },
   async get(id) {
-    const { data, error } = await supabaseBrowser()
-      .from("pages")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    return data ? fromRow(data) : null;
+    const r = await call((await server()).getPage(id));
+    return r ? fromRow(r) : null;
   },
   async create(page) {
-    const { data, error } = await supabaseBrowser()
-      .from("pages")
-      .insert({ name: page.name, data: toData(page) })
-      .select("*")
-      .single();
-    if (error) throw new Error(error.message);
-    return fromRow(data);
+    return fromRow(await call((await server()).createPage(page.name, toData(page))));
   },
   async save(page) {
-    const { error } = await supabaseBrowser()
-      .from("pages")
-      .update({
-        name: page.name,
-        data: toData(page),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", page.id)
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
+    await call((await server()).savePage(page.id, page.name, toData(page)));
   },
   async remove(id) {
-    const { error } = await supabaseBrowser()
-      .from("pages")
-      .delete()
-      .eq("id", id);
-    if (error) throw new Error(error.message);
+    await call((await server()).removePage(id));
   },
   async publish(page, slug) {
     if (!validWhatsApp(page.settings.whatsapp))
@@ -176,64 +159,32 @@ const cloudStore: Store = {
         ok: false,
         error: "Use 2–48 letters, numbers or dashes, like dapur-mak-long.",
       };
-    const sb = supabaseBrowser();
-    const { data: user } = await sb.auth.getUser();
-    if (!user.user) return { ok: false, error: "Please log in again." };
     if (page.slug && page.slug !== slug)
       return {
         ok: false,
         error:
           "Keep your existing link. Duplicate the page if you need another address.",
       };
-    const { error } = await sb.rpc("publish_page", {
-      p_page_id: page.id,
-      p_slug: slug,
-      p_name: page.name,
-      p_data: toData(page),
-    });
-    if (error)
-      return {
-        ok: false,
-        error:
-          error.code === "23505"
-            ? "That link is already taken. Choose another."
-            : error.code === "PGRST202"
-              ? "Database setup needs updating before publishing. See the README."
-              : error.message,
-      };
-    await refreshLive(page.id);
-    return { ok: true, slug };
+    try {
+      await call((await server()).publishPage(page.id, slug, page.name, toData(page)));
+      return { ok: true, slug };
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
   },
   async unpublish(page) {
-    const { error } = await supabaseBrowser().rpc("unpublish_page", {
-      p_page_id: page.id,
-    });
-    if (error) throw new Error(error.message);
-    await refreshLive(page.id);
+    await call((await server()).unpublishPage(page.id));
   },
   async uploadImage(blob) {
-    const sb = supabaseBrowser();
-    const { data: user } = await sb.auth.getUser();
-    if (!user.user) throw new Error("Please log in again.");
-    const ext = blob.type === "image/png" ? "png" : "jpg";
-    const path = `${user.user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await sb.storage
-      .from("photos")
-      .upload(path, blob, { contentType: blob.type, cacheControl: "31536000" });
-    if (error) throw new Error(error.message);
-    return sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+    const form = new FormData();
+    form.append("file", blob);
+    return call((await server()).uploadPhoto(form));
   },
   async orders() {
-    const { data, error } = await supabaseBrowser()
-      .from("orders")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (error) throw new Error(error.message);
-    return (data || []).map((r: any) => ({
+    return (await call((await server()).listOrders())).map((r: any) => ({
       id: r.id,
       slug: r.slug,
-      createdAt: r.created_at,
+      createdAt: new Date(r.created_at).toISOString(),
       total: Number(r.total),
       items: r.items,
       shipping: r.shipping,
@@ -242,7 +193,7 @@ const cloudStore: Store = {
   },
 };
 
-export const store: Store = hasSupabase ? cloudStore : demoStore;
+export const store: Store = hasCloud ? cloudStore : demoStore;
 
 /** Shrink photos before saving so pages stay light and fast. */
 export async function shrinkImage(file: File, max = 1600): Promise<Blob> {
@@ -269,12 +220,8 @@ export async function shrinkImage(file: File, max = 1600): Promise<Blob> {
 }
 
 export async function storageOwner() {
-  if (!hasSupabase) return "demo";
-  const {
-    data: { user },
-  } = await supabaseBrowser().auth.getUser();
-  if (!user) throw new Error("Please log in again.");
-  return user.id;
+  if (!hasCloud) return "demo";
+  return call((await server()).whoAmI());
 }
 export async function restoreBackup(
   data: unknown,
@@ -317,42 +264,20 @@ export async function restoreBackup(
   return { restored, skipped, failed };
 }
 export async function publishedVersions(id: string) {
-  if (!hasSupabase) return [];
-  const { data, error } = await supabaseBrowser()
-    .from("page_releases")
-    .select("id,name,data,created_at")
-    .eq("page_id", id)
-    .order("created_at", { ascending: false })
-    .limit(20);
-  if (error) throw new Error(error.message);
-  return data || [];
-}
-/** Ask the server to refresh the cached live page straight away (best effort). */
-async function refreshLive(pageId: string) {
-  try {
-    await fetch("/api/revalidate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pageId }),
-    });
-  } catch {
-    /* the cache expires on its own within 5 minutes */
-  }
+  if (!hasCloud) return [];
+  return (await call((await server()).pageReleases(id))).map((r: any) => ({
+    ...r,
+    created_at: new Date(r.created_at).toISOString(),
+  }));
 }
 export async function rollbackPublished(id: string, release: string) {
-  const { error } = await supabaseBrowser().rpc("rollback_page", {
-    p_page_id: id,
-    p_release: release,
-  });
-  if (error) throw new Error(error.message);
-  await refreshLive(id);
+  await call((await server()).rollbackPage(id, release));
 }
 export async function pageActivity(id: string) {
-  if (!hasSupabase) return [];
-  const { data, error } = await supabaseBrowser()
-    .from("page_activity")
-    .select("visits,cta,whatsapp")
-    .eq("page_id", id);
-  if (error) throw new Error(error.message);
-  return data || [];
+  if (!hasCloud) return [];
+  return (await call((await server()).pageActivity(id))) as {
+    visits: number;
+    cta: number;
+    whatsapp: number;
+  }[];
 }

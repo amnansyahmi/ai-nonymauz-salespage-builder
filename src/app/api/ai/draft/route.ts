@@ -2,8 +2,8 @@
    Turned on by setting ANTHROPIC_API_KEY on the server; AI_COPY_MODEL optionally picks the model. */
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { hasSupabase } from "@/lib/supabase/env";
-import { supabaseServer } from "@/lib/supabase/server";
+import { sellerId, authConfigured } from "@/lib/auth/server";
+import { claimAiDraft } from "@/lib/server/data";
 import {
   DRAFT_SCHEMA,
   DRAFT_SYSTEM,
@@ -14,7 +14,8 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const enabled = () => hasSupabase && !!process.env.ANTHROPIC_API_KEY;
+const enabled = () =>
+  !!process.env.DATABASE_URL && authConfigured() && !!process.env.ANTHROPIC_API_KEY;
 const fail = (error: string, status: number) =>
   NextResponse.json({ ok: false, error }, { status });
 
@@ -37,19 +38,14 @@ export async function POST(req: Request) {
   }
   if (!input) return fail("Describe your product first.", 400);
 
-  const sb = await supabaseServer();
-  const { data: auth } = await sb.auth.getUser();
-  if (!auth.user) return fail("Please log in again.", 401);
-  const { data: allowed, error: limitError } = await sb.rpc("claim_ai_draft", {
-    p_limit: 10,
-  });
-  if (limitError)
-    return fail(
-      limitError.code === "PGRST202"
-        ? "Database setup needs updating before AI drafts. See the README."
-        : "Could not start a draft.",
-      503,
-    );
+  const uid = await sellerId();
+  if (!uid) return fail("Please log in again.", 401);
+  let allowed = false;
+  try {
+    allowed = await claimAiDraft(uid, 10);
+  } catch {
+    return fail("Could not start a draft.", 503);
+  }
   if (!allowed)
     return fail("You have used this hour's 10 drafts. Try again later.", 429);
 

@@ -1,4 +1,4 @@
-/* Device recovery and demo pages share an atomic IndexedDB store. Cloud auth stays in Supabase. */
+/* Device recovery and demo pages share an atomic IndexedDB store. Cloud accounts use Neon Auth. */
 import type { Page } from "./types";
 import { clone, uid } from "./format";
 import { normalizePage } from "./page";

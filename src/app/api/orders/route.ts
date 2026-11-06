@@ -1,9 +1,9 @@
 /* Prices and eligibility are checked against the published catalog inside a transactional RPC. */
 import { NextResponse } from "next/server";
-import { hasSupabase } from "@/lib/supabase/env";
-import { supabasePublic } from "@/lib/supabase/server";
+import { placeOrder } from "@/lib/server/data";
+import { pgCode } from "@/lib/server/db";
 export async function POST(req: Request) {
-  if (!hasSupabase)
+  if (!process.env.DATABASE_URL)
     return NextResponse.json(
       { ok: false, error: "not configured" },
       { status: 503 },
@@ -42,26 +42,27 @@ export async function POST(req: Request) {
       { ok: false, error: "consent required" },
       { status: 400 },
     );
-  const { data, error } = await supabasePublic().rpc("place_order", {
-    p_slug: b.slug,
-    p_form_id: b.formId,
-    p_quantities: b.quantities,
-    p_shipping_index: b.shippingIndex || 0,
-    p_customer: b.customer || {},
-    p_request_id: b.requestId,
-  });
-  if (error)
+  try {
+    const id = await placeOrder({
+      slug: b.slug,
+      formId: b.formId,
+      quantities: b.quantities,
+      shippingIndex: Number.isInteger(b.shippingIndex) ? b.shippingIndex : 0,
+      customer: b.customer || {},
+      requestId: b.requestId,
+    });
+    return NextResponse.json({ ok: true, id });
+  } catch (e) {
+    const invalid = pgCode(e) === "22023";
+    if (!invalid) console.error("place_order failed", e);
     return NextResponse.json(
       {
         ok: false,
-        error:
-          error.code === "PGRST202"
-            ? "Checkout database setup needs updating."
-            : error.code === "22023"
-              ? "Check your selected items and customer details."
-              : "Could not record this enquiry.",
+        error: invalid
+          ? "Check your selected items and customer details."
+          : "Could not record this enquiry.",
       },
-      { status: error.code === "22023" ? 400 : 503 },
+      { status: invalid ? 400 : 503 },
     );
-  return NextResponse.json({ ok: true, id: data });
+  }
 }
