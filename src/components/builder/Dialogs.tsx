@@ -189,7 +189,7 @@ export function PublishDialog({
           </h3>
           {store.mode === "demo" ? (
             <p>
-              Demo mode keeps pages on this device. Connect Supabase to enable
+              Demo mode keeps pages on this device. Connect the Neon database to enable
               publishing with your account.
             </p>
           ) : (

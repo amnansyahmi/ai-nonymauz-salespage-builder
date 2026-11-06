@@ -1,27 +1,36 @@
 'use client';
 import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabaseBrowser } from '@/lib/supabase/client';
+import { authClient } from '@/lib/auth/client';
 import { Logo } from './ui';
 
 export default function Login() {
   const params = useSearchParams();
-  const next = params.get('next') || '/dashboard';
+  const asked = params.get('next') || '/dashboard';
+  const next = asked.startsWith('/') && !asked.startsWith('//') ? asked : '/dashboard';
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>(params.get('error') ? 'error' : 'idle');
   const [msg, setMsg] = useState(params.get('error') ? 'That sign-in link has expired. Send a new one.' : '');
-  const redirectTo = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  const callbackURL = () => `${window.location.origin}${next}`;
 
   async function sendLink(e: FormEvent) {
     e.preventDefault();
     if (!/^\S+@\S+\.\S+$/.test(email)) { setState('error'); setMsg('Enter a valid email address, like nama@gmail.com.'); return; }
     setState('sending');
-    const { error } = await supabaseBrowser().auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo() } });
-    if (error) { setState('error'); setMsg(error.message); } else setState('sent');
+    try {
+      const { error } = await authClient().signIn.magicLink({ email, callbackURL: callbackURL() });
+      if (error) { setState('error'); setMsg(error.message || 'Could not send the link. Try again.'); } else setState('sent');
+    } catch {
+      setState('error'); setMsg('Could not reach the server. Check your connection and try again.');
+    }
   }
   async function google() {
-    const { error } = await supabaseBrowser().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectTo() } });
-    if (error) { setState('error'); setMsg(error.message); }
+    try {
+      const { error } = await authClient().signIn.social({ provider: 'google', callbackURL: callbackURL() });
+      if (error) { setState('error'); setMsg(error.message || 'Google sign-in failed. Try the email link instead.'); }
+    } catch {
+      setState('error'); setMsg('Could not reach the server. Check your connection and try again.');
+    }
   }
 
   return (

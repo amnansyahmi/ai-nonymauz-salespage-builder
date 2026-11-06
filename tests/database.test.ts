@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
-test("Supabase migration: atomic publication, RLS, catalog pricing, offline retention and rollback", async () => {
+test("Database schema: atomic publication, RLS, catalog pricing, offline retention and rollback", async () => {
   const db = new PGlite();
   const owner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     other = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
@@ -73,20 +73,13 @@ test("Supabase migration: atomic publication, RLS, catalog pricing, offline rete
     );
   }
   try {
+    // Stand-in for the table Neon Auth creates; the schema links every seller row to it.
     await db.exec(
-      `create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create schema storage;create table storage.buckets(id text primary key,name text,public boolean);create table storage.objects(id uuid default gen_random_uuid(),bucket_id text,name text);create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;`,
+      `create schema neon_auth;create table neon_auth."user"(id uuid primary key);`,
     );
-    await db.exec(readFileSync("supabase/schema.sql", "utf8"));
-    await db.exec(
-      readFileSync("supabase/migrations/20261101_seller_studio.sql", "utf8"),
-    ); // rerun is safe
-    await db.exec(
-      readFileSync("supabase/migrations/20261102_consent_ai_drafts.sql", "utf8"),
-    );
-    await db.exec(
-      "grant usage on schema public,auth,storage to anon,authenticated;grant select,insert,update,delete on public.pages,public.published_pages,public.orders to anon,authenticated;",
-    );
-    await db.query("insert into auth.users(id) values($1),($2)", [
+    await db.exec(readFileSync("db/schema.sql", "utf8"));
+    await db.exec(readFileSync("db/schema.sql", "utf8")); // rerun is safe
+    await db.query('insert into neon_auth."user"(id) values($1),($2)', [
       owner,
       other,
     ]);
@@ -140,7 +133,7 @@ test("Supabase migration: atomic publication, RLS, catalog pricing, offline rete
         "insert into public.orders(slug,owner_id,items,total,customer) values('test-shop',$1,'[]',0,'{}')",
         [owner],
       ),
-      /row-level security/,
+      /row-level security|permission denied/,
     );
     await assert.rejects(
       order([1, 0], 99, customer, "77777777-7777-4777-8777-777777777777"),

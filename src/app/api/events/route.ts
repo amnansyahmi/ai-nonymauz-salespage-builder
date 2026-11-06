@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { hasSupabase } from "@/lib/supabase/env";
-import { supabasePublic } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/server/data";
 export async function POST(req: Request) {
-  if (!hasSupabase) return NextResponse.json({ ok: false }, { status: 503 });
+  if (!process.env.DATABASE_URL) return NextResponse.json({ ok: false }, { status: 503 });
   const origin = req.headers.get("origin");
   if (origin && origin !== new URL(req.url).origin)
     return NextResponse.json({ ok: false }, { status: 403 });
@@ -13,11 +12,12 @@ export async function POST(req: Request) {
       !["visit", "cta", "whatsapp"].includes(b.event)
     )
       return NextResponse.json({ ok: false }, { status: 400 });
-    const { error } = await supabasePublic().rpc("track_page_event", {
-      p_slug: b.slug,
-      p_event: b.event,
-    });
-    return NextResponse.json({ ok: !error }, { status: error ? 503 : 200 });
+    try {
+      await trackEvent(b.slug, b.event);
+      return NextResponse.json({ ok: true });
+    } catch {
+      return NextResponse.json({ ok: false }, { status: 503 });
+    }
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
   }

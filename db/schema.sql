@@ -1,6 +1,85 @@
--- Apply after schema.sql. Adds atomic publishing, history and catalog-validated orders.
--- Keeps the existing Supabase accounts and photo bucket. Safe to re-run.
-begin;
+-- Nonymauz Salespage Builder: database schema for Neon Postgres. Safe to re-run.
+-- Apply with `npm run db:setup` (uses DATABASE_URL), or paste into the Neon SQL Editor.
+-- Sellers sign in with Neon Auth; their accounts live in neon_auth."user".
+-- The app server runs each request as one of two roles and sets the signed-in seller's id,
+-- so row-level security and the RPCs below decide what each request may see or change:
+--   anon          buyers and visitors (published pages, checkout, visit counts)
+--   authenticated a signed-in seller (auth.uid() = their Neon Auth user id)
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+end $$;
+grant anon, authenticated to current_user;
+create schema if not exists auth;
+create or replace function auth.uid() returns uuid language sql stable
+  as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+grant usage on schema public, auth to anon, authenticated;
+grant execute on function auth.uid() to anon, authenticated;
+
+
+-- Sellers' working copies (drafts). Only the owner can see or change them.
+create table if not exists public.pages (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references neon_auth."user"(id) on delete cascade default auth.uid(),
+  name text not null default 'Untitled page',
+  data jsonb not null,            -- { theme, settings, blocks }
+  slug text,                      -- set when first published
+  published boolean not null default false,
+  published_at timestamptz,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+create index if not exists pages_owner_idx on public.pages (owner_id, updated_at desc);
+
+-- What buyers see: a frozen copy made when the seller presses Publish.
+create table if not exists public.published_pages (
+  slug text primary key check (slug ~ '^[a-z0-9]([a-z0-9-]{0,46}[a-z0-9])?$'),
+  page_id uuid not null unique references public.pages (id) on delete cascade,
+  owner_id uuid not null references neon_auth."user"(id) on delete cascade,
+  name text not null,
+  data jsonb not null,
+  published_at timestamptz not null default now()
+);
+
+-- Orders placed through a published page (also sent to the seller on WhatsApp).
+create table if not exists public.orders (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null references public.published_pages (slug) on delete cascade,
+  owner_id uuid not null references neon_auth."user"(id) on delete cascade,
+  items jsonb not null,
+  shipping jsonb,
+  total numeric(10, 2) not null check (total >= 0 and total < 1000000),
+  customer jsonb not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists orders_owner_idx on public.orders (owner_id, created_at desc);
+
+alter table public.pages enable row level security;
+alter table public.published_pages enable row level security;
+alter table public.orders enable row level security;
+
+-- pages: owner only
+drop policy if exists "own pages" on public.pages;
+create policy "own pages" on public.pages for all
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+
+-- published_pages: anyone can read; only the owner writes
+drop policy if exists "published are public" on public.published_pages;
+create policy "published are public" on public.published_pages for select using (true);
+drop policy if exists "owner publishes" on public.published_pages;
+create policy "owner publishes" on public.published_pages for all
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+
+-- orders: buyers (anonymous) may add an order to a published page; only the seller reads them
+drop policy if exists "buyers place orders" on public.orders;
+create policy "buyers place orders" on public.orders for insert to anon, authenticated
+  with check (exists (select 1 from public.published_pages p where p.slug = orders.slug and p.owner_id = orders.owner_id));
+drop policy if exists "seller reads orders" on public.orders;
+create policy "seller reads orders" on public.orders for select using (owner_id = auth.uid());
+drop policy if exists "seller deletes orders" on public.orders;
+create policy "seller deletes orders" on public.orders for delete using (owner_id = auth.uid());
+
+-- Publishing, release history, daily activity and catalog-validated orders.
 alter table public.published_pages add column if not exists active boolean not null default true;
 alter table public.orders add column if not exists request_id uuid;
 create unique index if not exists orders_request_idx on public.orders(request_id) where request_id is not null;
@@ -8,7 +87,7 @@ create unique index if not exists orders_request_idx on public.orders(request_id
 create table if not exists public.page_releases (
  id uuid primary key default gen_random_uuid(),
  page_id uuid not null references public.pages(id) on delete cascade,
- owner_id uuid not null references auth.users(id) on delete cascade,
+ owner_id uuid not null references neon_auth."user"(id) on delete cascade,
  name text not null, data jsonb not null, created_at timestamptz not null default now()
 );
 create index if not exists page_releases_owner_idx on public.page_releases(owner_id,page_id,created_at desc);
@@ -18,7 +97,7 @@ create policy "owner reads releases" on public.page_releases for select to authe
 
 create table if not exists public.page_activity (
  page_id uuid not null references public.pages(id) on delete cascade,
- owner_id uuid not null references auth.users(id) on delete cascade,
+ owner_id uuid not null references neon_auth."user"(id) on delete cascade,
  day date not null default current_date,
  visits bigint not null default 0, cta bigint not null default 0, whatsapp bigint not null default 0,
  primary key(page_id,day)
@@ -100,6 +179,9 @@ begin
  if p_request_id is null or jsonb_typeof(p_quantities)<>'array' or jsonb_array_length(p_quantities)>100 or octet_length(p_customer::text)>10000 then raise exception 'Invalid checkout' using errcode='22023'; end if;
  select * into publication from public.published_pages where slug=p_slug and active for share;
  if not found then raise exception 'Page is not live' using errcode='22023'; end if;
+ -- PDPA: only keep buyer details when the shop saves orders and the buyer ticked the consent box.
+ if coalesce(publication.data->'settings'->>'captureOrders','true')='false' then raise exception 'This shop does not save orders' using errcode='22023'; end if;
+ if coalesce(p_customer->>'consent','')<>'true' then raise exception 'Buyer consent is required' using errcode='22023'; end if;
  -- Retry only returns an existing ID for this exact publication, without exposing another buyer's record.
  select id into result from public.orders where request_id=p_request_id and slug=p_slug;
  if found then return result; end if;
@@ -124,7 +206,7 @@ begin
  if coalesce((form->>'askAddress')::boolean,false) and not coalesce((shipping->>'pickup')::boolean,false) and trim(coalesce(p_customer->>'address',''))='' then raise exception 'Address is required' using errcode='22023';end if;
  if coalesce((form->>'askSchedule')::boolean,false) and (coalesce(p_customer->>'date','') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' or coalesce(p_customer->>'time','') !~ '^[0-9]{2}:[0-9]{2}$' or ((p_customer->>'date')::date+(p_customer->>'time')::time) <= (now() at time zone 'Asia/Kuala_Lumpur')) then raise exception 'Choose a future appointment' using errcode='22023';end if;
  if coalesce(form->>'variants','')<>'' and not exists(select 1 from regexp_split_to_table(form->>'variants',',') v where trim(v)=trim(coalesce(p_customer->>'variant',''))) then raise exception 'Invalid variant' using errcode='22023';end if;
- customer:=jsonb_build_object('name',left(trim(p_customer->>'name'),120),'phone',phone,'address',case when coalesce((shipping->>'pickup')::boolean,false) then '' else left(coalesce(p_customer->>'address',''),500) end,'note',left(coalesce(p_customer->>'note',''),500),'variant',left(coalesce(p_customer->>'variant',''),120),'date',left(coalesce(p_customer->>'date',''),10),'time',left(coalesce(p_customer->>'time',''),5));
+ customer:=jsonb_build_object('name',left(trim(p_customer->>'name'),120),'phone',phone,'address',case when coalesce((shipping->>'pickup')::boolean,false) then '' else left(coalesce(p_customer->>'address',''),500) end,'note',left(coalesce(p_customer->>'note',''),500),'variant',left(coalesce(p_customer->>'variant',''),120),'date',left(coalesce(p_customer->>'date',''),10),'time',left(coalesce(p_customer->>'time',''),5),'consentAt',now());
  if sub+fee>=1000000 then raise exception 'Order value is too large' using errcode='22023';end if;
  insert into public.orders(slug,owner_id,items,shipping,total,customer,request_id) values(p_slug,publication.owner_id,items,shipping,round(sub+fee,2),customer,p_request_id)
  on conflict(request_id) where request_id is not null do nothing returning id into result;
@@ -137,4 +219,31 @@ grant execute on function public.publish_page(uuid,text,text,jsonb),public.unpub
 revoke all on function public.place_order(text,text,jsonb,integer,jsonb,uuid),public.track_page_event(text,text) from public;
 grant execute on function public.place_order(text,text,jsonb,integer,jsonb,uuid),public.track_page_event(text,text) to anon,authenticated;
 grant select on public.page_releases,public.page_activity to authenticated;
-commit;
+-- AI copy drafts: a per-seller hourly allowance, claimed through one RPC so it cannot be backdated or reset.
+create table if not exists public.ai_drafts (
+ id bigserial primary key,
+ owner_id uuid not null references neon_auth."user"(id) on delete cascade,
+ created_at timestamptz not null default now()
+);
+create index if not exists ai_drafts_owner_idx on public.ai_drafts(owner_id,created_at);
+alter table public.ai_drafts enable row level security;
+revoke all on public.ai_drafts from anon,authenticated;
+create or replace function public.claim_ai_draft(p_limit integer default 10)
+returns boolean language plpgsql security definer set search_path=public,pg_temp as $$
+declare me uuid:=auth.uid(); used integer;
+begin
+ if me is null then raise exception 'Log in first' using errcode='42501'; end if;
+ perform pg_advisory_xact_lock(hashtext('ai_drafts:'||me::text));
+ select count(*) into used from public.ai_drafts where owner_id=me and created_at>now()-interval '1 hour';
+ if used>=least(greatest(coalesce(p_limit,10),1),30) then return false; end if;
+ insert into public.ai_drafts(owner_id) values(me);
+ delete from public.ai_drafts where owner_id=me and created_at<now()-interval '1 day';
+ return true;
+end $$;
+revoke all on function public.claim_ai_draft(integer) from public,anon;
+grant execute on function public.claim_ai_draft(integer) to authenticated;
+
+-- What each role may touch directly; row-level security narrows it to the seller's own rows.
+grant select, insert, update, delete on public.pages to authenticated;
+grant select on public.published_pages to anon, authenticated;
+grant select, delete on public.orders to authenticated;

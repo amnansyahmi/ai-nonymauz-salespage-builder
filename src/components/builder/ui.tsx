@@ -2,7 +2,7 @@
 /* Shared builder pieces: icons, toast messages, the product mark, the top bar. */
 import Link from 'next/link';
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
-import { hasSupabase } from '@/lib/supabase/env';
+import { hasCloud } from '@/lib/cloud';
 
 const PATHS: Record<string, ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
@@ -88,7 +88,7 @@ export function TopBar({ active, children }: { active?: 'pages' | 'orders'; chil
     <header className="topbar">
       <div className="topbar-l">
         <Link className="wordmark" href="/dashboard"><Logo />Nonymauz</Link>
-        {hasSupabase && (
+        {hasCloud && (
           <nav className="topnav" aria-label="Main">
             <Link href="/dashboard" aria-current={active === 'pages' ? 'page' : undefined}>Pages</Link>
             <Link href="/orders" aria-current={active === 'orders' ? 'page' : undefined}>Orders</Link>
@@ -97,7 +97,7 @@ export function TopBar({ active, children }: { active?: 'pages' | 'orders'; chil
       </div>
       <div className="topbar-r">
         {children}
-        {hasSupabase && (
+        {hasCloud && (
           <form action="/auth/signout" method="post"><button className="btn tertiary" type="submit">Log out</button></form>
         )}
       </div>
